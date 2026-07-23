@@ -46,6 +46,26 @@ const messages: Record<string, { title: string; description: string; variant: "s
     description: "Le débit demandé dépasse le solde disponible.",
     variant: "danger"
   },
+  password_reset: {
+    title: "Mot de passe réinitialisé",
+    description: "Le joueur peut se reconnecter avec son nouveau mot de passe temporaire.",
+    variant: "success"
+  },
+  delete_blocked: {
+    title: "Suppression bloquée",
+    description: "Le joueur possède encore des liens métier. Désactivez-le à la place.",
+    variant: "warning"
+  },
+  deleted: {
+    title: "Joueur supprimé",
+    description: "Le compte joueur a été supprimé définitivement.",
+    variant: "success"
+  },
+  settings_updated: {
+    title: "Paramètres enregistrés",
+    description: "Les paramètres généraux ont été mis à jour.",
+    variant: "success"
+  },
   already_processed: {
     title: "Demande déjà traitée",
     description: "Cette alimentation a déjà été validée, refusée ou annulée.",
@@ -170,6 +190,76 @@ const messages: Record<string, { title: string; description: string; variant: "s
     title: "État incompatible",
     description: "L’action demandée n’est pas possible dans l’état actuel.",
     variant: "danger"
+  },
+  poll_created: {
+    title: "Sondage créé",
+    description: "Le sondage a été enregistré.",
+    variant: "success"
+  },
+  poll_updated: {
+    title: "Sondage mis à jour",
+    description: "Les paramètres du sondage ont été enregistrés.",
+    variant: "success"
+  },
+  poll_opened: {
+    title: "Sondage ouvert",
+    description: "Les participants peuvent répondre.",
+    variant: "success"
+  },
+  poll_paused: {
+    title: "Sondage suspendu",
+    description: "Les réponses sont momentanément bloquées.",
+    variant: "warning"
+  },
+  poll_closed: {
+    title: "Sondage clôturé",
+    description: "Le sondage est fermé.",
+    variant: "warning"
+  },
+  poll_reopened: {
+    title: "Sondage rouvert",
+    description: "Le sondage est à nouveau accessible.",
+    variant: "success"
+  },
+  poll_cancelled: {
+    title: "Sondage annulé",
+    description: "Le sondage a été annulé.",
+    variant: "danger"
+  },
+  poll_response_saved: {
+    title: "Réponse enregistrée",
+    description: "La réponse du joueur a été prise en compte.",
+    variant: "success"
+  },
+  poll_match_created: {
+    title: "Match créé",
+    description: "Le match a été généré depuis le sondage.",
+    variant: "success"
+  },
+  poll_capacity_updated: {
+    title: "Capacité mise à jour",
+    description: "Le sondage a été ajusté.",
+    variant: "success"
+  },
+  not_open: {
+    title: "Sondage fermé",
+    description: "Le sondage n’accepte pas de nouvelles réponses pour le moment.",
+    variant: "danger"
+  },
+  response_locked: {
+    title: "Réponse verrouillée",
+    description: "La modification de réponse est désactivée par l’administrateur.",
+    variant: "warning"
+  },
+  capacity_too_small: {
+    title: "Capacité trop faible",
+    description: "La capacité ne peut pas être inférieure au nombre de présents actuels.",
+    variant: "danger"
+  },
+  match_exists: {
+    title: "Match déjà créé",
+    description: "Un match a déjà été généré à partir de ce sondage.",
+    variant: "warning"
   }
 };
 

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { decimal, formatDh } from "@/lib/money";
 import { lowBalanceNotification } from "@/lib/notifications";
 import { generateReceiptNumber } from "@/lib/topup-receipt";
+import { getAppSettings } from "@/lib/settings";
 import { topUpIdSchema, topUpSchema } from "@/lib/validators";
 import { NotificationType, Prisma, TopUpStatus, WalletTransactionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -100,6 +101,7 @@ export async function requestTopUp(formData: FormData) {
 export async function approveTopUp(formData: FormData) {
   const session = await requireAdmin();
   const topUpId = parseTopUpId(formData);
+  const settings = await getAppSettings();
 
   try {
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -169,11 +171,11 @@ export async function approveTopUp(formData: FormData) {
         }
       });
 
-      if (balanceAfter.lt(20)) {
+      if (balanceAfter.lt(settings.walletAlertThreshold)) {
         await tx.notification.create({
           data: {
             userId: topUp.userId,
-            ...lowBalanceNotification(balanceAfter)
+            ...lowBalanceNotification(balanceAfter, settings.walletAlertThreshold.toNumber())
           }
         });
       }

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { NoticeBanner } from "@/components/notice-banner";
+import { getAppSettings } from "@/lib/settings";
 import { ReceiptActions } from "./receipt-actions";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -68,11 +69,14 @@ export default async function TopUpReceiptPage({
     notFound();
   }
 
+  const settings = await getAppSettings();
+
   const whatsappMessage = buildTopUpWhatsappMessage({
     playerName: topUp.user.name,
     amount: topUp.amount.toString(),
     receiptNumber: topUp.receiptNumber,
-    balanceAfter: transaction.balanceAfter.toString()
+    balanceAfter: transaction.balanceAfter.toString(),
+    template: settings.whatsappTemplate
   });
 
   return (

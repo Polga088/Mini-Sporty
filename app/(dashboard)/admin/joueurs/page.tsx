@@ -11,8 +11,9 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
-import { ConfirmButton } from "@/components/confirm-button";
-import { createPlayer, disablePlayer, enablePlayer } from "@/app/actions/players";
+import { PlayerActionsMenu } from "@/components/player-actions-menu";
+import { FormSubmitButton } from "@/components/form-submit-button";
+import { createPlayer, deletePlayer, disablePlayer, enablePlayer, resetPlayerPassword } from "@/app/actions/players";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -82,6 +83,10 @@ function activeFilterLabel(status: string) {
   return "Tous";
 }
 
+function emptyLabel(label: string) {
+  return <div className="rounded-2xl border border-dashed px-4 py-6 text-sm text-slate-500">{label}</div>;
+}
+
 export default async function PlayersAdminPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
@@ -110,7 +115,6 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const visiblePlayers = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
   const sharedParams = { q, status, sort };
 
   return (
@@ -135,7 +139,15 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
       </section>
 
       <Card>
-        <CardTitle>Filtrer les joueurs</CardTitle>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <CardTitle>Filtrer les joueurs</CardTitle>
+            <CardDescription className="max-w-2xl">
+              Recherchez par nom, email ou téléphone, triez par solde ou activité, puis ouvrez les actions depuis le menu.
+            </CardDescription>
+          </div>
+        </div>
+
         <form method="get" className="mt-4 grid gap-4 md:grid-cols-4">
           <div className="md:col-span-2">
             <Label htmlFor="q">Recherche</Label>
@@ -161,8 +173,8 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
               <option value="created_asc">Création ancienne</option>
             </select>
           </div>
-          <div className="md:col-span-4 flex gap-3">
-            <Button type="submit">Appliquer</Button>
+          <div className="md:col-span-4 flex flex-wrap gap-3">
+            <FormSubmitButton>Appliquer</FormSubmitButton>
             <Button variant="ghost" type="button" asChild>
               <Link href="/admin/joueurs">Réinitialiser</Link>
             </Button>
@@ -171,10 +183,15 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
       </Card>
 
       <Card>
-        <CardTitle>Nouveau joueur</CardTitle>
-        <CardDescription className="max-w-3xl">
-          Créez un compte joueur avec un wallet automatique. Si le solde initial est supérieur à zéro, une transaction de crédit manuel est enregistrée.
-        </CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <CardTitle>Nouveau joueur</CardTitle>
+            <CardDescription className="max-w-3xl">
+              Créez un compte joueur avec wallet automatique et solde initial optionnel. Les boutons de soumission affichent un état de chargement.
+            </CardDescription>
+          </div>
+        </div>
+
         <form action={createPlayer} className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <Label htmlFor="name">Nom</Label>
@@ -197,14 +214,20 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
             <Input id="initialBalance" name="initialBalance" type="number" min="0" step="0.01" placeholder="0.00" />
           </div>
           <div className="flex items-end">
-            <Button type="submit">Créer le joueur</Button>
+            <FormSubmitButton>Créer le joueur</FormSubmitButton>
           </div>
         </form>
       </Card>
 
       <Card>
-        <CardTitle>Liste des joueurs</CardTitle>
-        <div className="mt-4 hidden overflow-hidden rounded-2xl border md:block">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <CardTitle>Liste des joueurs</CardTitle>
+          <p className="text-sm text-slate-600">
+            {sorted.length === 0 ? "Aucun joueur trouvé" : `${sorted.length} joueur(s) trouvé(s)`}
+          </p>
+        </div>
+
+        <div className="mt-4 hidden overflow-hidden rounded-2xl border lg:block">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
@@ -241,25 +264,16 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
                     <td className="px-4 py-3">{player._count.participatedMatches}</td>
                     <td className="px-4 py-3">{format(player.createdAt, "dd/MM/yyyy", { locale: fr })}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Button variant="ghost" type="button" asChild>
-                          <Link href={`/admin/joueurs/${player.id}`}>Voir</Link>
-                        </Button>
-                        <form action={player.isActive ? disablePlayer : enablePlayer}>
-                          <input type="hidden" name="playerId" value={player.id} />
-                          <ConfirmButton
-                            type="submit"
-                            variant={player.isActive ? "destructive" : "default"}
-                            message={
-                              player.isActive
-                                ? `Désactiver ${player.name} ? Il ne pourra plus se connecter ni être ajouté à un match.`
-                                : `Réactiver ${player.name} ?`
-                            }
-                          >
-                            {player.isActive ? "Désactiver" : "Réactiver"}
-                          </ConfirmButton>
-                        </form>
-                      </div>
+                      <PlayerActionsMenu
+                        playerId={player.id}
+                        playerName={player.name}
+                        isActive={player.isActive}
+                        returnTo="/admin/joueurs"
+                        disableAction={disablePlayer}
+                        enableAction={enablePlayer}
+                        resetPasswordAction={resetPlayerPassword}
+                        deleteAction={deletePlayer}
+                      />
                     </td>
                   </tr>
                 ))
@@ -268,15 +282,13 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
           </table>
         </div>
 
-        <div className="mt-4 space-y-3 md:hidden">
+        <div className="mt-4 grid gap-4 lg:hidden">
           {visiblePlayers.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-slate-500">
-              Aucun joueur ne correspond à ces critères.
-            </div>
+            emptyLabel("Aucun joueur ne correspond à ces critères.")
           ) : (
             visiblePlayers.map((player) => (
-              <div key={player.id} className="rounded-2xl border p-4">
-                <div className="flex items-start justify-between gap-4">
+              <div key={player.id} className="rounded-2xl border bg-white p-4 shadow-soft">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-semibold">{player.name}</p>
                     <p className="text-sm text-slate-600">{player.email}</p>
@@ -298,35 +310,28 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
                     <p className="font-medium">{format(player.createdAt, "dd/MM/yyyy", { locale: fr })}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button variant="ghost" type="button" asChild>
-                    <Link href={`/admin/joueurs/${player.id}`}>Voir</Link>
-                  </Button>
-                  <form action={player.isActive ? disablePlayer : enablePlayer}>
-                    <input type="hidden" name="playerId" value={player.id} />
-                    <ConfirmButton
-                      type="submit"
-                      variant={player.isActive ? "destructive" : "default"}
-                      message={
-                        player.isActive
-                          ? `Désactiver ${player.name} ?`
-                          : `Réactiver ${player.name} ?`
-                      }
-                    >
-                      {player.isActive ? "Désactiver" : "Réactiver"}
-                    </ConfirmButton>
-                  </form>
+                <div className="mt-4 flex justify-end">
+                  <PlayerActionsMenu
+                    playerId={player.id}
+                    playerName={player.name}
+                    isActive={player.isActive}
+                    returnTo="/admin/joueurs"
+                    disableAction={disablePlayer}
+                    enableAction={enablePlayer}
+                    resetPasswordAction={resetPlayerPassword}
+                    deleteAction={deletePlayer}
+                  />
                 </div>
               </div>
             ))
           )}
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-4 border-t pt-4 text-sm">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t pt-4 text-sm">
           <p className="text-slate-600">
             {sorted.length === 0 ? "Aucun joueur trouvé" : `${sorted.length} joueur(s) trouvé(s)`}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {currentPage > 1 ? (
               <Button variant="ghost" asChild>
                 <Link href={buildHref("/admin/joueurs", { ...sharedParams, page: String(currentPage - 1) })}>Précédent</Link>

@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { prisma } from "../lib/prisma";
 import { Role, WalletTransactionType } from "@prisma/client";
-import { createPlayer, createManualWalletAdjustment, disablePlayer, enablePlayer } from "../app/actions/players";
+import { createPlayer, createManualWalletAdjustment, deletePlayer, disablePlayer, enablePlayer, resetPlayerPassword } from "../app/actions/players";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -177,6 +177,32 @@ describe("actions joueurs", () => {
     await cleanupByEmail(email);
   });
 
+  it("réinitialise le mot de passe d'un joueur", async () => {
+    mocks.auth.mockResolvedValue(adminSession());
+    const player = await prisma.user.findUnique({
+      where: { email: "player01@fridaymatch.local" },
+      select: { id: true, passwordHash: true }
+    });
+    if (!player) throw new Error("Joueur seed introuvable.");
+
+    await expectRedirect(
+      resetPlayerPassword(
+        formData({
+          playerId: player.id,
+          returnTo: `/admin/joueurs/${player.id}`
+        })
+      ),
+      `/admin/joueurs/${player.id}?success=password_reset`
+    );
+
+    const updated = await prisma.user.findUnique({
+      where: { id: player.id },
+      select: { passwordHash: true }
+    });
+
+    expect(updated?.passwordHash).not.toBe(player.passwordHash);
+  });
+
   it("crée un crédit manuel et met à jour le solde", async () => {
     mocks.auth.mockResolvedValue(adminSession());
     const email = `credit-${Date.now()}@test.local`;
@@ -327,5 +353,69 @@ describe("actions joueurs", () => {
       ),
       "/espace"
     );
+  });
+
+  it("bloque la suppression d'un joueur lié", async () => {
+    mocks.auth.mockResolvedValue(adminSession());
+    const email = `linked-${Date.now()}@test.local`;
+
+    await expectRedirect(
+      createPlayer(
+        formData({
+          name: "Joueur lié",
+          email,
+          phone: "",
+          temporaryPassword: "TempPass123!",
+          initialBalance: "5"
+        })
+      ),
+      /^\/admin\/joueurs\/.+\?success=created$/
+    );
+
+    const created = await prisma.user.findUnique({ where: { email }, include: { wallet: true } });
+    if (!created) throw new Error("Joueur introuvable.");
+
+    await expectRedirect(
+      deletePlayer(
+        formData({
+          playerId: created.id,
+          returnTo: `/admin/joueurs/${created.id}`
+        })
+      ),
+      `/admin/joueurs/${created.id}?error=delete_blocked`
+    );
+
+    const stillThere = await prisma.user.findUnique({ where: { id: created.id } });
+    expect(stillThere).not.toBeNull();
+
+    await cleanupByEmail(email);
+  });
+
+  it("supprime définitivement un joueur sans lien", async () => {
+    mocks.auth.mockResolvedValue(adminSession());
+    const email = `unlink-${Date.now()}@test.local`;
+
+    const created = await prisma.user.create({
+      data: {
+        name: "Joueur supprimable",
+        email,
+        passwordHash: "hash",
+        role: Role.PLAYER,
+        isActive: true
+      }
+    });
+
+    await expectRedirect(
+      deletePlayer(
+        formData({
+          playerId: created.id,
+          returnTo: "/admin/joueurs"
+        })
+      ),
+      "/admin/joueurs?success=deleted"
+    );
+
+    const deleted = await prisma.user.findUnique({ where: { id: created.id } });
+    expect(deleted).toBeNull();
   });
 });

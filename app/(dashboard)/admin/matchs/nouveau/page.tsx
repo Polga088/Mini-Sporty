@@ -6,6 +6,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MatchStatus } from "@prisma/client";
+import { getAppSettings } from "@/lib/settings";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -41,6 +42,7 @@ export default async function NewMatchPage({ searchParams }: { searchParams?: Pr
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
   const success = firstValue(query.success);
   const error = firstValue(query.error);
+  const settings = await getAppSettings();
 
   return (
     <div className="space-y-6">
@@ -48,9 +50,9 @@ export default async function NewMatchPage({ searchParams }: { searchParams?: Pr
 
       <Card>
         <CardTitle>Nouveau match</CardTitle>
-        <CardDescription className="max-w-2xl">
-          Créez un match du vendredi avec un prix par joueur par défaut de 10 DH si aucun montant n’est saisi.
-        </CardDescription>
+          <CardDescription className="max-w-2xl">
+            Créez un match du vendredi avec les valeurs par défaut de l’organisation.
+          </CardDescription>
         <form action={createMatch} className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <Label htmlFor="title">Titre</Label>
@@ -70,7 +72,7 @@ export default async function NewMatchPage({ searchParams }: { searchParams?: Pr
           </div>
           <div>
             <Label htmlFor="location">Terrain</Label>
-            <Input id="location" name="location" required />
+            <Input id="location" name="location" defaultValue={settings.defaultGround} required />
           </div>
           <div>
             <Label htmlFor="bookingReference">Référence Rabat Animation</Label>
@@ -78,11 +80,11 @@ export default async function NewMatchPage({ searchParams }: { searchParams?: Pr
           </div>
           <div>
             <Label htmlFor="capacity">Capacité</Label>
-            <Input id="capacity" name="capacity" type="number" min="1" required />
+            <Input id="capacity" name="capacity" type="number" min="1" defaultValue={settings.defaultCapacity} required />
           </div>
           <div>
             <Label htmlFor="participationFee">Prix par joueur</Label>
-            <Input id="participationFee" name="participationFee" type="number" min="0" step="0.01" defaultValue="10" />
+            <Input id="participationFee" name="participationFee" type="number" min="0" step="0.01" defaultValue={settings.defaultMatchPrice.toString()} />
           </div>
           <div>
             <Label htmlFor="cancellationDeadline">Date limite d’annulation</Label>

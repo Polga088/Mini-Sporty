@@ -100,6 +100,20 @@ enum NotificationType {
   GENERAL
 }
 
+enum PollStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+  CANCELLED
+}
+
+enum PollResponseChoice {
+  PRESENT
+  ABSENT
+  MAYBE
+}
+
 model User {
   id                       String                    @id @default(cuid())
   name                     String
@@ -121,6 +135,9 @@ model User {
   notifications            Notification[]
   participatedMatches      MatchParticipant[]
   contributionParticipants ContributionParticipant[]
+  createdPolls             Poll[]                    @relation("PollCreatedBy")
+  pollResponses            PollResponse[]
+  pollManagedResponses     PollResponse[]            @relation("PollManagedBy")
 }
 
 model Wallet {
@@ -194,6 +211,7 @@ model Match {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   createdBy            User               @relation("MatchCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  poll                 Poll?              @relation("PollToMatch")
   participants         MatchParticipant[]
   expenses             Expense[]
 
@@ -295,5 +313,69 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model AppSettings {
+  id                   String   @id @default(cuid())
+  singletonKey         String   @unique
+  organizationName     String
+  logoUrl              String?
+  defaultGround        String
+  defaultMatchPrice    Decimal  @db.Decimal(12, 2)
+  defaultCapacity      Int
+  walletAlertThreshold Decimal  @db.Decimal(12, 2)
+  whatsappTemplate     String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Poll {
+  id                   String          @id @default(cuid())
+  title                String
+  description          String?
+  matchTitle           String
+  matchDate            DateTime
+  startTime            String
+  endTime              String
+  location             String
+  capacity             Int
+  matchAmount          Decimal         @default(10) @db.Decimal(12, 2)
+  allowResponseChanges Boolean         @default(true)
+  manualControl        Boolean         @default(false)
+  opensAt              DateTime?
+  closesAt             DateTime?
+  status               PollStatus      @default(DRAFT)
+  matchId              String?         @unique
+  createdById          String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  createdBy            User            @relation("PollCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  match                Match?          @relation("PollToMatch", fields: [matchId], references: [id], onDelete: SetNull)
+  responses            PollResponse[]
+
+  @@index([status, createdAt])
+  @@index([matchDate, status])
+}
+
+model PollResponse {
+  id             String             @id @default(cuid())
+  pollId         String
+  userId         String
+  response       PollResponseChoice
+  isWaitlisted   Boolean            @default(false)
+  waitlistOrder  Int?
+  respondedAt    DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  managedById    String?
+  managedAt      DateTime?
+  poll           Poll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  managedBy      User?              @relation("PollManagedBy", fields: [managedById], references: [id], onDelete: SetNull)
+
+  @@unique([pollId, userId])
+  @@index([pollId, response])
+  @@index([pollId, isWaitlisted])
   @@index([userId, createdAt])
 }

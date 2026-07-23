@@ -50,15 +50,15 @@ export function buildTopUpWhatsappMessage(params: {
   amount: string | number;
   receiptNumber: string;
   balanceAfter: string | number;
+  template?: string;
 }) {
-  return [
-    `Bonjour ${params.playerName},`,
-    "",
-    `Votre alimentation de ${formatDh(params.amount)} a été validée.`,
-    "",
-    `Numéro de reçu : ${params.receiptNumber}`,
-    `Nouveau solde : ${formatDh(params.balanceAfter)}`,
-    "",
-    "Merci."
-  ].join("\n");
+  const template =
+    params.template ??
+    "Bonjour {name},\n\nVotre alimentation de {amount} DH a été validée.\n\nNuméro de reçu : {receiptNumber}\nNouveau solde : {balance} DH\n\nMerci.";
+
+  return template
+    .replaceAll("{name}", params.playerName)
+    .replaceAll("{amount}", formatDh(params.amount))
+    .replaceAll("{receiptNumber}", params.receiptNumber)
+    .replaceAll("{balance}", formatDh(params.balanceAfter));
 }

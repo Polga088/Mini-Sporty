@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { ConfirmButton } from "@/components/confirm-button";
-import { createManualWalletAdjustment, disablePlayer, enablePlayer, updatePlayer } from "@/app/actions/players";
+import { PlayerActionsMenu } from "@/components/player-actions-menu";
+import { createManualWalletAdjustment, disablePlayer, deletePlayer, enablePlayer, resetPlayerPassword, updatePlayer } from "@/app/actions/players";
 import { Role } from "@prisma/client";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -143,16 +144,16 @@ export default async function PlayerDetailPage({
             </div>
           </form>
           <div className="mt-4">
-            <form action={player.isActive ? disablePlayer : enablePlayer}>
-              <input type="hidden" name="playerId" value={player.id} />
-              <ConfirmButton
-                type="submit"
-                variant={player.isActive ? "destructive" : "default"}
-                message={player.isActive ? `Désactiver ${player.name} ?` : `Réactiver ${player.name} ?`}
-              >
-                {player.isActive ? "Désactiver le joueur" : "Réactiver le joueur"}
-              </ConfirmButton>
-            </form>
+            <PlayerActionsMenu
+              playerId={player.id}
+              playerName={player.name}
+              isActive={player.isActive}
+              returnTo={`/admin/joueurs/${player.id}`}
+              disableAction={disablePlayer}
+              enableAction={enablePlayer}
+              resetPasswordAction={resetPlayerPassword}
+              deleteAction={deletePlayer}
+            />
           </div>
         </Card>
 

@@ -113,3 +113,62 @@ export const createExpenseSchema = z.object({
   contributionId: z.string().optional().or(z.literal("")),
   receiptUrl: z.string().url().optional().or(z.literal(""))
 });
+
+export const pollStatusValues = ["DRAFT", "OPEN", "PAUSED", "CLOSED", "CANCELLED"] as const;
+export const pollResponseValues = ["PRESENT", "ABSENT", "MAYBE"] as const;
+
+export const pollStatusSchema = z.enum(pollStatusValues);
+export const pollResponseSchema = z.enum(pollResponseValues);
+
+export const createPollSchema = z.object({
+  title: z.string().min(3),
+  description: z.string().optional().or(z.literal("")),
+  matchTitle: z.string().min(3),
+  matchDate: z.string().min(1),
+  startTime: z.string().min(1),
+  endTime: z.string().min(1),
+  location: z.string().min(2),
+  capacity: z.coerce.number().int().min(1),
+  matchAmount: moneySchema.optional(),
+  allowResponseChanges: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
+  manualControl: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
+  opensAt: z.string().optional().or(z.literal("")),
+  closesAt: z.string().optional().or(z.literal("")),
+  status: pollStatusSchema.default("DRAFT")
+});
+
+export const updatePollSchema = createPollSchema.extend({
+  pollId: z.string().min(1)
+});
+
+export const pollCapacitySchema = z.object({
+  pollId: z.string().min(1),
+  capacity: z.coerce.number().int().min(1)
+});
+
+export const pollRespondSchema = z.object({
+  pollId: z.string().min(1),
+  response: pollResponseSchema
+});
+
+export const pollManageParticipantSchema = z.object({
+  pollId: z.string().min(1),
+  userId: z.string().min(1)
+});
+
+export const pollMoveParticipantSchema = z.object({
+  pollId: z.string().min(1),
+  userId: z.string().min(1),
+  target: z.enum(["PRESENT", "ABSENT", "WAITLISTED"])
+});
+
+export const appSettingsSchema = z.object({
+  singletonKey: z.string().min(1),
+  organizationName: z.string().min(2),
+  logoUrl: z.string().url().optional().or(z.literal("")),
+  defaultGround: z.string().min(2),
+  defaultMatchPrice: moneySchema,
+  defaultCapacity: z.coerce.number().int().min(1),
+  walletAlertThreshold: moneySchema,
+  whatsappTemplate: z.string().min(20)
+});

@@ -1,6 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decimal } from "@/lib/money";
@@ -63,6 +64,15 @@ function errorCode(error: unknown): string {
 
 function playerIdFromForm(formData: FormData) {
   return String(formData.get("playerId") ?? "");
+}
+
+function returnToFromForm(formData: FormData) {
+  const value = String(formData.get("returnTo") ?? "/admin/joueurs");
+  return value.startsWith("/") ? value : "/admin/joueurs";
+}
+
+function passwordResetPassword() {
+  return `Fm-${randomBytes(4).toString("hex")}-2026!`;
 }
 
 export async function createPlayer(formData: FormData) {
@@ -225,6 +235,95 @@ export async function enablePlayer(formData: FormData) {
     detailSuccess(updatedId, "enabled");
   } catch (error) {
     const code = errorCode(error);
+    if (code === "not_found") detailError(playerId, "not_found");
+    if (code === "unexpected") throw error;
+    detailError(playerId, code);
+  }
+}
+
+export async function resetPlayerPassword(formData: FormData) {
+  await requireAdmin();
+  const playerId = playerIdFromForm(formData);
+  const returnTo = returnToFromForm(formData);
+
+  try {
+    const payload = z.object({
+      playerId: z.string().min(1)
+    }).parse({ playerId });
+
+    const player = await prisma.user.findUnique({
+      where: { id: payload.playerId },
+      select: { id: true, role: true }
+    });
+
+    if (!player || player.role !== Role.PLAYER) {
+      throw new BusinessError("not_found");
+    }
+
+    const temporaryPassword = passwordResetPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+
+    await prisma.user.update({
+      where: { id: player.id },
+      data: { passwordHash }
+    });
+
+    revalidatePath("/admin/joueurs");
+    revalidatePath(`/admin/joueurs/${player.id}`);
+
+    redirect(`${returnTo}?${new URLSearchParams({ success: "password_reset" }).toString()}`);
+  } catch (error) {
+    const code = errorCode(error);
+    if (code === "not_found") detailError(playerId, "not_found");
+    if (code === "validation") detailError(playerId, "validation");
+    if (code === "unexpected") throw error;
+    detailError(playerId, code);
+  }
+}
+
+export async function deletePlayer(formData: FormData) {
+  await requireAdmin();
+  const playerId = playerIdFromForm(formData);
+  const returnTo = returnToFromForm(formData);
+
+  try {
+    const player = await prisma.user.findUnique({
+      where: { id: playerId },
+      include: {
+        wallet: {
+          include: {
+            transactions: true
+          }
+        },
+        participatedMatches: true,
+        topUps: true
+      }
+    });
+
+    if (!player || player.role !== Role.PLAYER) {
+      throw new BusinessError("not_found");
+    }
+
+    const linkedMatch = player.participatedMatches.length > 0;
+    const linkedWallet = Boolean(player.wallet);
+    const linkedTransactions = Boolean(player.wallet?.transactions.length);
+    const linkedTopUps = player.topUps.length > 0;
+
+    if (linkedMatch || linkedWallet || linkedTransactions || linkedTopUps) {
+      throw new BusinessError("delete_blocked");
+    }
+
+    await prisma.user.delete({
+      where: { id: player.id }
+    });
+
+    revalidatePath("/admin/joueurs");
+    redirect(`${returnTo}?${new URLSearchParams({ success: "deleted" }).toString()}`);
+  } catch (error) {
+    const code = errorCode(error);
+    if (code === "delete_blocked") {
+      redirect(`${returnTo}?${new URLSearchParams({ error: "delete_blocked" }).toString()}`);
+    }
     if (code === "not_found") detailError(playerId, "not_found");
     if (code === "unexpected") throw error;
     detailError(playerId, code);
