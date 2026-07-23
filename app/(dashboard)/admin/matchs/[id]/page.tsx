@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { ConfirmButton } from "@/components/confirm-button";
+import { canManageSport } from "@/lib/permissions";
 import {
   addParticipant,
   addParticipantToWaitlist,
@@ -154,7 +155,7 @@ export default async function AdminMatchDetailPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
 
   const { id } = await Promise.resolve(params);
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;

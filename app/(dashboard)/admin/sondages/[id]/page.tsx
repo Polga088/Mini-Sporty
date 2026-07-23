@@ -18,7 +18,10 @@ import { PollActionsMenu } from "@/components/poll-actions-menu";
 import { PollProgress } from "@/components/poll-progress";
 import { Timeline } from "@/components/timeline";
 import { PollBoard } from "@/components/poll-board";
+import { WhatsAppActions } from "@/components/whatsapp-actions";
+import { canManageSport } from "@/lib/permissions";
 import { buildPollWhatsappMessage, pollStatusLabels, pollStatusVariant } from "@/lib/polls";
+import { getAppSettings } from "@/lib/settings";
 import {
   addPollParticipant,
   cancelPoll,
@@ -50,12 +53,13 @@ export default async function AdminPollDetailPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
 
   const { id } = await params;
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
   const success = firstValue(query.success);
   const error = firstValue(query.error);
+  const settings = await getAppSettings();
 
   const poll = await prisma.poll.findUnique({
     where: { id },
@@ -90,7 +94,9 @@ export default async function AdminPollDetailPage({
     capacity: poll.capacity,
     presentCount,
     waitlistCount,
-    matchAmount: poll.matchAmount.toString()
+    matchAmount: poll.matchAmount.toString(),
+    link: `/admin/sondages/${poll.id}`,
+    organizationName: settings.organizationName
   });
 
   const availablePlayers = players.filter((player) => !poll.responses.some((response) => response.userId === player.id));
@@ -286,12 +292,8 @@ export default async function AdminPollDetailPage({
           <Card>
             <CardTitle>Partager sur WhatsApp</CardTitle>
             <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{whatsappMessage}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button asChild>
-                <Link href={`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`} target="_blank" rel="noreferrer">
-                  Ouvrir WhatsApp
-                </Link>
-              </Button>
+            <div className="mt-3">
+              <WhatsAppActions message={whatsappMessage} whatsappUrl={`https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`} />
             </div>
           </Card>
         </div>

@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decimal } from "@/lib/money";
+import { matchCreatedNotification, pollOpenedNotification, pollPromotedNotification } from "@/lib/notifications";
 import {
   createPollSchema,
   pollCapacitySchema,
@@ -15,6 +16,7 @@ import {
   MatchPaymentStatus,
   MatchParticipantStatus,
   MatchStatus,
+  NotificationType,
   PollResponseChoice,
   PollStatus,
   Prisma,
@@ -23,6 +25,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { canManageSport } from "@/lib/permissions";
 
 class BusinessError extends Error {
   code: string;
@@ -36,14 +39,14 @@ class BusinessError extends Error {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
   return session;
 }
 
 async function requirePlayer() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (session.user.isAdmin) redirect("/admin");
+  if (canManageSport(session.user.role)) redirect("/admin");
   return session;
 }
 
@@ -267,6 +270,18 @@ export async function openPoll(formData: FormData) {
   await requireAdmin();
   const pollId = String(formData.get("pollId") ?? "");
   const poll = await setPollStatus(pollId, PollStatus.OPEN);
+  const players = await prisma.user.findMany({
+    where: { role: Role.PLAYER, isActive: true },
+    select: { id: true }
+  });
+  if (players.length > 0) {
+    await prisma.notification.createMany({
+      data: players.map((player) => ({
+        userId: player.id,
+        ...pollOpenedNotification(poll.title)
+      }))
+    });
+  }
   revalidatePollViews(poll.id);
   redirectNotice(`/admin/sondages/${poll.id}`, "poll_opened");
 }
@@ -453,6 +468,13 @@ export async function promotePollParticipant(formData: FormData) {
           waitlistOrder: null,
           managedById: null,
           managedAt: new Date()
+        }
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: response.userId,
+          ...pollPromotedNotification(poll.title)
         }
       });
     });
@@ -683,6 +705,13 @@ export async function createMatchFromPoll(formData: FormData) {
           status: PollStatus.CLOSED
         }
       });
+
+      await tx.notification.createMany({
+        data: presentResponses.map((response) => ({
+          userId: response.userId,
+          ...matchCreatedNotification(match.title)
+        }))
+      });
     });
 
     revalidatePollViews(pollId);
@@ -694,4 +723,63 @@ export async function createMatchFromPoll(formData: FormData) {
     if (code === "unexpected") throw error;
     redirectNotice("/admin/sondages", code, "error");
   }
+}
+
+export async function syncPollAutomation() {
+  const session = await requireAdmin();
+  const now = new Date();
+  const affectedIds = new Set<string>();
+  let closedCount = 0;
+  let promotedCount = 0;
+
+  const openPolls = await prisma.poll.findMany({
+    where: { status: PollStatus.OPEN },
+    include: { responses: true }
+  });
+
+  for (const poll of openPolls) {
+    await prisma.$transaction(async (tx) => {
+      const beforeWaitlisted = poll.responses.filter((response) => response.isWaitlisted).length;
+      await promoteWaitlisted(tx, poll.id);
+      const refreshed = await tx.poll.findUnique({
+        where: { id: poll.id },
+        include: { responses: true }
+      });
+      if (!refreshed) return;
+
+      const afterWaitlisted = refreshed.responses.filter((response) => response.isWaitlisted).length;
+      if (afterWaitlisted < beforeWaitlisted) {
+        promotedCount += beforeWaitlisted - afterWaitlisted;
+        affectedIds.add(refreshed.id);
+      }
+
+      if (refreshed.closesAt && refreshed.closesAt.getTime() <= now.getTime()) {
+        await tx.poll.update({
+          where: { id: refreshed.id },
+          data: { status: PollStatus.CLOSED }
+        });
+        closedCount += 1;
+        affectedIds.add(refreshed.id);
+      }
+    });
+  }
+
+  if (closedCount > 0 || promotedCount > 0) {
+    await prisma.notification.create({
+      data: {
+        userId: session.user.id,
+        type: NotificationType.GENERAL,
+        title: "Synchronisation automatique",
+        message: `Sondages clôturés: ${closedCount}. Promotions en attente traitées: ${promotedCount}.`
+      }
+    });
+  }
+
+  for (const pollId of affectedIds) {
+    revalidatePollViews(pollId);
+  }
+  revalidatePath("/admin/sondages");
+  revalidatePath("/espace/sondages");
+
+  redirectNotice("/admin/sondages", "poll_updated");
 }

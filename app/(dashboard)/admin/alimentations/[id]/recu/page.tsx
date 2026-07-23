@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
 import { buildTopUpWhatsappMessage, paymentMethodLabel } from "@/lib/topup-receipt";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -29,7 +30,7 @@ export default async function TopUpReceiptPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { id } = await params;
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;

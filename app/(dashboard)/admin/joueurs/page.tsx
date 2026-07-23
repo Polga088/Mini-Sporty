@@ -14,6 +14,7 @@ import { NoticeBanner } from "@/components/notice-banner";
 import { PlayerActionsMenu } from "@/components/player-actions-menu";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { createPlayer, deletePlayer, disablePlayer, enablePlayer, resetPlayerPassword } from "@/app/actions/players";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -90,7 +91,7 @@ function emptyLabel(label: string) {
 export default async function PlayersAdminPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { q, status, sort, page, success, error } = await normalizeQuery(searchParams);
 

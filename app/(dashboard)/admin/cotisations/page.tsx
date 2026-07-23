@@ -1,13 +1,14 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui/card";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { createContribution, debitContribution } from "@/app/actions/contributions";
 import { redirect } from "next/navigation";
 
 export default async function AdminContributionsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const contributions = await prisma.contribution.findMany({ orderBy: { createdAt: "desc" } });
 

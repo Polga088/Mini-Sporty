@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   ADMIN
+  CAPTAIN
   PLAYER
 }
 
@@ -89,6 +90,12 @@ enum ExpenseCategory {
 }
 
 enum NotificationType {
+  POLL_OPENED
+  POLL_CLOSING_SOON
+  POLL_NEAR_FULL
+  POLL_PROMOTED
+  MATCH_CREATED
+  MATCH_UPDATED
   LOW_BALANCE
   MATCH_CONFIRMATION
   MATCH_CANCELLED

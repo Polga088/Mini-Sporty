@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { isAdmin } from "@/lib/permissions";
+import { isAdmin, isCaptain } from "@/lib/permissions";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -66,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.sub ?? "";
         session.user.role = token.role;
         session.user.isAdmin = isAdmin(token.role);
+        session.user.isCaptain = isCaptain(token.role);
       }
 
       return session;

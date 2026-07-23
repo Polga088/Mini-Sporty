@@ -18,6 +18,8 @@ const prisma = new PrismaClient();
 
 const adminEmail = "admin@fridaymatch.local";
 const adminPassword = "Admin123!";
+const captainEmail = "captain@fridaymatch.local";
+const captainPassword = "Captain123!";
 const playerPassword = "Player123!";
 
 const playerSeeds = [
@@ -63,6 +65,30 @@ async function main() {
       where: { userId: admin.id },
       update: { balance: "250.00" },
       create: { userId: admin.id, balance: "250.00" }
+    });
+
+    const captain = await tx.user.upsert({
+      where: { email: captainEmail },
+      update: {
+        name: "Capitaine",
+        passwordHash: await bcrypt.hash(captainPassword, 10),
+        role: Role.CAPTAIN,
+        phone: "+212600111111",
+        isActive: true
+      },
+      create: {
+        name: "Capitaine",
+        email: captainEmail,
+        passwordHash: await bcrypt.hash(captainPassword, 10),
+        role: Role.CAPTAIN,
+        phone: "+212600111111"
+      }
+    });
+
+    await tx.wallet.upsert({
+      where: { userId: captain.id },
+      update: { balance: "180.00" },
+      create: { userId: captain.id, balance: "180.00" }
     });
 
     const players = [];
@@ -476,9 +502,10 @@ async function main() {
     return { admin, playersCount: players.length, match, contribution };
   });
 
-  console.log("Seed terminé avec succès.");
-  console.log(`Admin: ${adminEmail} / ${adminPassword}`);
-  console.log(`Joueurs: ${playerSeeds.length} comptes de démonstration créés ou mis à jour.`);
+    console.log("Seed terminé avec succès.");
+    console.log(`Admin: ${adminEmail} / ${adminPassword}`);
+    console.log(`Capitaine: ${captainEmail} / ${captainPassword}`);
+    console.log(`Joueurs: ${playerSeeds.length} comptes de démonstration créés ou mis à jour.`);
   console.log(`Match seed: ${result.match.title} le ${result.match.matchDate.toISOString()}`);
   console.log(`Cotisation seed: ${result.contribution.title}`);
 }

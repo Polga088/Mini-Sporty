@@ -4,14 +4,15 @@ import { Separator } from "@/components/ui/separator";
 import { signOut } from "@/auth";
 import { AppNav } from "@/components/app-nav";
 import { formatDh } from "@/lib/money";
-import { Prisma } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { roleLabel } from "@/lib/permissions";
 
 export function AppShell({
   title,
   subtitle,
-  isAdmin,
+  role,
   organizationName,
   logoUrl,
   defaultMatchPrice,
@@ -20,7 +21,7 @@ export function AppShell({
 }: {
   title: string;
   subtitle: string;
-  isAdmin: boolean;
+  role?: Role | null;
   organizationName: string;
   logoUrl?: string | null;
   defaultMatchPrice: Prisma.Decimal | number | string;
@@ -42,7 +43,7 @@ export function AppShell({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-                <Badge variant={isAdmin ? "success" : "info"}>{isAdmin ? "ADMIN" : "PLAYER"}</Badge>
+                <Badge variant={role === "ADMIN" ? "success" : role === "CAPTAIN" ? "info" : "default"}>{roleLabel(role)}</Badge>
               </div>
               <p className="text-sm text-slate-600">{subtitle}</p>
             </div>
@@ -65,7 +66,7 @@ export function AppShell({
       <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[280px_1fr] lg:px-8">
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <nav className="rounded-3xl border border-white/70 bg-white/75 p-3 shadow-soft backdrop-blur">
-            <AppNav isAdmin={isAdmin} />
+            <AppNav role={role} />
           </nav>
           <div className="rounded-3xl border border-slate-900 bg-slate-950 p-4 text-white shadow-soft">
             <p className="text-sm text-slate-300">Règle clé</p>

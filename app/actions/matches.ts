@@ -23,6 +23,8 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { canManageSport } from "@/lib/permissions";
+import { matchCancelledNotification, matchCreatedNotification, matchUpdatedNotification } from "@/lib/notifications";
 
 class BusinessError extends Error {
   code: string;
@@ -70,7 +72,7 @@ function newMatchError(notice: string) {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
   return session;
 }
 
@@ -279,6 +281,10 @@ export async function createMatch(formData: FormData) {
       }
     });
 
+    await prisma.notification.createMany({
+      data: [{ userId: session.user.id, ...matchCreatedNotification(match.title) }]
+    });
+
     revalidateMatchViews(match.id);
     detailSuccess(match.id, "match_created");
   } catch (error) {
@@ -345,6 +351,19 @@ export async function updateMatch(formData: FormData) {
       }
     });
 
+    const participants = await prisma.matchParticipant.findMany({
+      where: { matchId: payload.matchId },
+      select: { userId: true }
+    });
+    if (participants.length > 0) {
+      await prisma.notification.createMany({
+        data: participants.map((participant) => ({
+          userId: participant.userId,
+          ...matchUpdatedNotification(payload.title)
+        }))
+      });
+    }
+
     revalidateMatchViews(payload.matchId);
     detailSuccess(payload.matchId, "match_updated");
   } catch (error) {
@@ -390,9 +409,7 @@ export async function cancelMatch(formData: FormData) {
         await tx.notification.create({
           data: {
             userId: participant.userId,
-            type: NotificationType.MATCH_CANCELLED,
-            title: "Match annulé",
-            message: `Le match "${match.title}" a été annulé par l’administrateur.`
+            ...matchCancelledNotification(match.title)
           }
         });
       }

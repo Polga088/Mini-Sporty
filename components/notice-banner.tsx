@@ -116,6 +116,16 @@ const messages: Record<string, { title: string; description: string; variant: "s
     description: "Le reçu n’est disponible qu’après validation de la demande.",
     variant: "danger"
   },
+  notification_read: {
+    title: "Notification lue",
+    description: "La notification a été marquée comme lue.",
+    variant: "success"
+  },
+  notifications_read: {
+    title: "Notifications lues",
+    description: "Toutes vos notifications ont été marquées comme lues.",
+    variant: "success"
+  },
   match_created: {
     title: "Match créé",
     description: "Le match a été enregistré.",

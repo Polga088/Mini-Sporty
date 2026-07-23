@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { PollActionsMenu } from "@/components/poll-actions-menu";
 import { pollStatusLabels, pollStatusVariant } from "@/lib/polls";
-import { cancelPoll, closePoll, createMatchFromPoll, openPoll, pausePoll, reopenPoll } from "@/app/actions/polls";
+import { canManageSport } from "@/lib/permissions";
+import { cancelPoll, closePoll, createMatchFromPoll, openPoll, pausePoll, reopenPoll, syncPollAutomation } from "@/app/actions/polls";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -44,7 +45,7 @@ function emptyLabel(label: string) {
 export default async function AdminPollsPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
 
   const { q, status, page, success, error } = await normalizeQuery(searchParams);
 
@@ -102,6 +103,11 @@ export default async function AdminPollsPage({ searchParams }: { searchParams?: 
           <Button asChild>
             <Link href="/admin/sondages/nouveau">Nouveau sondage</Link>
           </Button>
+          <form action={syncPollAutomation}>
+            <Button type="submit" variant="ghost">
+              Synchroniser maintenant
+            </Button>
+          </form>
         </div>
 
         <form method="get" className="mt-4 grid gap-4 md:grid-cols-3">

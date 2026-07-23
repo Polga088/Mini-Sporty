@@ -8,6 +8,7 @@ declare module "next-auth" {
       id: string;
       role?: Role;
       isAdmin?: boolean;
+      isCaptain?: boolean;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -24,4 +25,3 @@ declare module "next-auth/jwt" {
     role?: Role;
   }
 }
-

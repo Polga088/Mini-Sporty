@@ -2,12 +2,13 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui/card";
 import { createExpense } from "@/app/actions/expenses";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 export default async function AdminExpensesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const expenses = await prisma.expense.findMany({ orderBy: { expenseDate: "desc" } });
 

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { ConfirmButton } from "@/components/confirm-button";
 import { PlayerActionsMenu } from "@/components/player-actions-menu";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { createManualWalletAdjustment, disablePlayer, deletePlayer, enablePlayer, resetPlayerPassword, updatePlayer } from "@/app/actions/players";
 import { Role } from "@prisma/client";
 
@@ -35,7 +36,7 @@ export default async function PlayerDetailPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { id } = await Promise.resolve(params);
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;

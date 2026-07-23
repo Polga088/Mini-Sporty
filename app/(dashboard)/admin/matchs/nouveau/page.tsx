@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MatchStatus } from "@prisma/client";
 import { getAppSettings } from "@/lib/settings";
+import { canManageSport } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -37,7 +38,7 @@ function matchStatusLabel(status: MatchStatus) {
 export default async function NewMatchPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
 
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
   const success = firstValue(query.success);

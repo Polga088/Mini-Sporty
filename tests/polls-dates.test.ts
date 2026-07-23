@@ -36,7 +36,8 @@ function adminSession() {
   return {
     user: {
       id: "admin-1",
-      isAdmin: true
+      isAdmin: true,
+      role: "ADMIN"
     }
   };
 }

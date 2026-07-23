@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { updateGeneralSettings } from "@/app/actions/settings";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -17,7 +18,7 @@ function firstValue(value: string | string[] | undefined) {
 export default async function AdminSettingsPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
   const success = firstValue(query.success);

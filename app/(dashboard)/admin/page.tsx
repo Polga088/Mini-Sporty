@@ -10,6 +10,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { redirect } from "next/navigation";
 import { BadgeEuro, ClipboardList, Users, Bell, Volleyball, Settings } from "lucide-react";
 import { Role, TopUpStatus, MatchStatus, PollStatus, PollResponseChoice } from "@prisma/client";
+import { canManageSport } from "@/lib/permissions";
 
 type FeedTone = "default" | "success" | "warning" | "danger" | "info";
 
@@ -34,7 +35,7 @@ function pollTone(status: PollStatus): FeedTone {
 export default async function AdminHomePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
 
   const settings = await getAppSettings();
 

@@ -7,13 +7,14 @@ import { formatDh } from "@/lib/money";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { paymentMethodLabel } from "@/lib/topup-receipt";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL("/connexion", request.url));
   }
-  if (!session.user.isAdmin) {
+  if (!canAccessSensitiveAdmin(session.user.role)) {
     return NextResponse.redirect(new URL("/espace", request.url));
   }
 

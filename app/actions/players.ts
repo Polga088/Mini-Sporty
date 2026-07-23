@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decimal } from "@/lib/money";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import {
   createPlayerSchema,
   manualWalletAdjustmentSchema,
@@ -27,7 +28,7 @@ class BusinessError extends Error {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
   return session;
 }
 

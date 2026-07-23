@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { ConfirmButton } from "@/components/confirm-button";
 import { cancelMatch } from "@/app/actions/matches";
+import { canManageSport } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -127,7 +128,7 @@ function emptyLabel(label: string) {
 export default async function AdminMatchesPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
 
   const { q, status, period, sort, page, success, error } = await normalizeQuery(searchParams);
 

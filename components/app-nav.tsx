@@ -3,20 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, BadgeEuro, Volleyball, ClipboardList, ReceiptText, PiggyBank, Settings, FileDown } from "lucide-react";
+import { LayoutDashboard, Users, BadgeEuro, Volleyball, ClipboardList, ReceiptText, PiggyBank, Settings, FileDown, Bell, ChartColumn } from "lucide-react";
+import { Role } from "@prisma/client";
+import { canAccessSensitiveAdmin, canManageSport } from "@/lib/permissions";
 
 const baseLinks = [
   { href: "/espace", label: "Dashboard", icon: LayoutDashboard },
   { href: "/espace/sondages", label: "Sondages", icon: ClipboardList },
   { href: "/espace/matchs", label: "Matchs", icon: Volleyball },
+  { href: "/espace/notifications", label: "Notifications", icon: Bell },
   { href: "/espace/portefeuilles", label: "Portefeuilles", icon: PiggyBank },
   { href: "/espace/transactions", label: "Transactions", icon: ReceiptText }
 ];
 
 const adminLinks = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/statistiques", label: "Statistiques", icon: ChartColumn },
   { href: "/admin/sondages", label: "Sondages", icon: ClipboardList },
   { href: "/admin/matchs", label: "Matchs", icon: Volleyball },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/alimentations", label: "Portefeuilles", icon: BadgeEuro },
   { href: "/admin/joueurs", label: "Joueurs", icon: Users },
   { href: "/admin/cotisations", label: "Cotisations", icon: ReceiptText },
@@ -25,9 +30,16 @@ const adminLinks = [
   { href: "/admin/parametres", label: "Paramètres", icon: Settings }
 ];
 
-export function AppNav({ isAdmin }: { isAdmin: boolean }) {
+export function AppNav({ role }: { role?: Role | null }) {
   const pathname = usePathname();
-  const links = isAdmin ? adminLinks : baseLinks;
+  const links = canManageSport(role)
+    ? adminLinks.filter((link) => {
+        if (link.href === "/admin/alimentations" || link.href === "/admin/joueurs" || link.href === "/admin/cotisations" || link.href === "/admin/depenses" || link.href === "/admin/exports" || link.href === "/admin/parametres") {
+          return canAccessSensitiveAdmin(role);
+        }
+        return true;
+      })
+    : baseLinks;
 
   return (
     <nav className="space-y-1">

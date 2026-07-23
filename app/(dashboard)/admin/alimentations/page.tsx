@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { ConfirmButton } from "@/components/confirm-button";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { approveTopUp, rejectTopUp } from "@/app/actions/wallet";
 import { redirect } from "next/navigation";
 
@@ -73,7 +74,7 @@ function emptyLabel(label: string) {
 export default async function AdminTopUpsPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { q, status, page, success, error } = await normalizeQuery(searchParams);
 

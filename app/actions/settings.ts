@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 
 class BusinessError extends Error {
   code: string;
@@ -21,7 +22,7 @@ class BusinessError extends Error {
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
   return session;
 }
 

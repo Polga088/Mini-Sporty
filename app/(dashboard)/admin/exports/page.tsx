@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui/card";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 function toCsv(rows: Array<Record<string, string | number | boolean | null | undefined>>) {
@@ -24,7 +25,7 @@ function toCsv(rows: Array<Record<string, string | number | boolean | null | und
 export default async function AdminExportsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const [players, transactions] = await Promise.all([
     prisma.user.findMany({ where: { role: "PLAYER" }, select: { name: true, email: true, phone: true, isActive: true } }),

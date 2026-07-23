@@ -6,6 +6,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { NoticeBanner } from "@/components/notice-banner";
 import { createPoll } from "@/app/actions/polls";
 import { getAppSettings } from "@/lib/settings";
+import { canManageSport } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -21,7 +22,7 @@ export default async function NewPollPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canManageSport(session.user.role)) redirect("/espace");
   const settings = await getAppSettings();
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
   const success = firstValue(query.success);

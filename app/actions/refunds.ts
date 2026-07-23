@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
+import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { MatchPaymentStatus, MatchParticipantStatus, NotificationType, Prisma, WalletTransactionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -10,7 +11,7 @@ import { redirect } from "next/navigation";
 async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
-  if (!session.user.isAdmin) redirect("/espace");
+  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
   return session;
 }
 

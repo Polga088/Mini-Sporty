@@ -1,4 +1,5 @@
 import { PollResponseChoice, PollStatus } from "@prisma/client";
+import { formatDh } from "@/lib/money";
 
 export const pollStatusLabels: Record<PollStatus, string> = {
   DRAFT: "Brouillon",
@@ -49,17 +50,58 @@ export function buildPollWhatsappMessage(params: {
   presentCount: number;
   waitlistCount: number;
   matchAmount: string;
+  link?: string;
+  organizationName?: string;
 }) {
   return [
     `Bonjour,`,
     "",
+    `${params.organizationName ?? "Friday Match Wallet"} partage un sondage.`,
     `Sondage: ${params.title}`,
     `Statut: ${params.statusLabel}`,
     `Capacité: ${params.capacity}`,
     `Présents: ${params.presentCount}`,
     `Liste d’attente: ${params.waitlistCount}`,
-    `Montant du match: ${params.matchAmount} DH`,
+    `Montant du match: ${formatDh(params.matchAmount)}`,
+    params.link ? `Lien direct: ${params.link}` : "",
     "",
     "Merci."
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function buildPollReminderWhatsappMessage(params: {
+  title: string;
+  closesAt: string;
+  link?: string;
+}) {
+  return [
+    `Bonjour,`,
+    "",
+    `Rappel: le sondage "${params.title}" se clôture le ${params.closesAt}.`,
+    params.link ? `Lien direct: ${params.link}` : "",
+    "",
+    "Merci."
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function buildPollCancellationWhatsappMessage(params: {
+  title: string;
+  reason?: string;
+  link?: string;
+}) {
+  return [
+    `Bonjour,`,
+    "",
+    `Le sondage "${params.title}" a été annulé.`,
+    params.reason ? `Motif: ${params.reason}` : "",
+    params.link ? `Lien direct: ${params.link}` : "",
+    "",
+    "Merci."
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
