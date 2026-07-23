@@ -56,9 +56,26 @@ function parseDateInput(value: string) {
   return new Date(`${value}T12:00:00.000Z`);
 }
 
+function parseDateTimeInput(value: string) {
+  return new Date(value);
+}
+
+function isValidDate(date: Date) {
+  return !Number.isNaN(date.getTime());
+}
+
+function parseRequiredDateInput(value: string) {
+  const date = parseDateInput(value);
+  if (!isValidDate(date)) throw new BusinessError("invalid_date");
+  return date;
+}
+
 function parseOptionalDateInput(value: string | null | undefined) {
   const text = normalizeOptionalText(value);
-  return text ? parseDateInput(text) : null;
+  if (!text) return null;
+  const date = parseDateTimeInput(text);
+  if (!isValidDate(date)) throw new BusinessError("invalid_date");
+  return date;
 }
 
 function noticeUrl(path: string, key: string, notice: string) {
@@ -161,7 +178,7 @@ export async function createPoll(formData: FormData) {
         title: payload.title,
         description: normalizeOptionalText(payload.description),
         matchTitle: payload.matchTitle,
-        matchDate: parseDateInput(payload.matchDate),
+        matchDate: parseRequiredDateInput(payload.matchDate),
         startTime: payload.startTime,
         endTime: payload.endTime,
         location: payload.location,
@@ -181,6 +198,7 @@ export async function createPoll(formData: FormData) {
   } catch (error) {
     const code = errorCode(error);
     if (code === "validation") redirectNotice("/admin/sondages/nouveau", "validation", "error");
+    if (code === "invalid_date") redirectNotice("/admin/sondages/nouveau", "invalid_date", "error");
     if (code === "unexpected") throw error;
     redirectNotice("/admin/sondages/nouveau", code, "error");
   }
@@ -213,7 +231,7 @@ export async function updatePoll(formData: FormData) {
         title: payload.title,
         description: normalizeOptionalText(payload.description),
         matchTitle: payload.matchTitle,
-        matchDate: parseDateInput(payload.matchDate),
+        matchDate: parseRequiredDateInput(payload.matchDate),
         startTime: payload.startTime,
         endTime: payload.endTime,
         location: payload.location,
@@ -232,6 +250,7 @@ export async function updatePoll(formData: FormData) {
   } catch (error) {
     const code = errorCode(error);
     if (code === "validation") redirectNotice("/admin/sondages", "validation", "error");
+    if (code === "invalid_date") redirectNotice("/admin/sondages", "invalid_date", "error");
     if (code === "unexpected") throw error;
     redirectNotice("/admin/sondages", code, "error");
   }

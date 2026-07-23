@@ -31,6 +31,11 @@ const messages: Record<string, { title: string; description: string; variant: "s
     description: "Vérifie les champs puis réessaie.",
     variant: "danger"
   },
+  invalid_date: {
+    title: "Date invalide",
+    description: "Vérifie la date du match, ainsi que les dates d’ouverture et de clôture du sondage.",
+    variant: "danger"
+  },
   email_taken: {
     title: "Email déjà utilisé",
     description: "Un autre compte utilise déjà cette adresse email.",

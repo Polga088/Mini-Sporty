@@ -8,15 +8,28 @@ import { createPoll } from "@/app/actions/polls";
 import { getAppSettings } from "@/lib/settings";
 import { redirect } from "next/navigation";
 
-export default async function NewPollPage() {
+type QueryParams = Record<string, string | string[] | undefined>;
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function NewPollPage({
+  searchParams
+}: {
+  searchParams?: Promise<QueryParams>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
   if (!session.user.isAdmin) redirect("/espace");
   const settings = await getAppSettings();
+  const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
+  const success = firstValue(query.success);
+  const error = firstValue(query.error);
 
   return (
     <div className="space-y-6">
-      <NoticeBanner />
+      <NoticeBanner success={success} error={error} />
 
       <Card>
         <CardTitle>Nouveau sondage</CardTitle>
@@ -64,10 +77,12 @@ export default async function NewPollPage() {
           <div>
             <Label htmlFor="opensAt">Ouverture</Label>
             <Input id="opensAt" name="opensAt" type="datetime-local" />
+            <p className="mt-1 text-xs text-slate-500">Facultatif. Laissez vide si le sondage n’a pas encore d’ouverture programmée.</p>
           </div>
           <div>
             <Label htmlFor="closesAt">Clôture</Label>
             <Input id="closesAt" name="closesAt" type="datetime-local" />
+            <p className="mt-1 text-xs text-slate-500">Facultatif. Laisser vide ne provoque pas d’erreur.</p>
           </div>
           <div>
             <Label htmlFor="status">Statut initial</Label>
