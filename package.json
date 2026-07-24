@@ -16,6 +16,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
+    "polls:sync": "tsx scripts/sync-polls.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

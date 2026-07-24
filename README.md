@@ -25,6 +25,15 @@ Mini-application interne pour gérer le match de football du vendredi.
 7. Lancer `prisma db seed`.
 8. Démarrer l’app avec `npm run dev`.
 
+## Automatisation des sondages
+
+- Synchronisation manuelle ou cron via `npm run polls:sync`
+- Ligne cron de production recommandée :
+
+```cron
+0 1 * * * cd /chemin/vers/friday-match-wallet && /bin/zsh -lc 'source ~/.nvm/nvm.sh && nvm use 22.11.0 >/dev/null && npm run polls:sync'
+```
+
 ## Comptes de seed
 
 - Admin: `admin@fridaymatch.local` / `Admin123!`

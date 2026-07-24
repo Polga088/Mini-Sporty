@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decimal } from "@/lib/money";
 import { matchCreatedNotification, pollOpenedNotification, pollPromotedNotification } from "@/lib/notifications";
+import { promoteWaitlistedResponses, syncPolls } from "@/lib/poll-sync";
 import {
   createPollSchema,
   pollCapacitySchema,
@@ -121,39 +122,6 @@ async function fetchPoll(tx: Prisma.TransactionClient, pollId: string) {
       }
     }
   });
-}
-
-async function promoteWaitlisted(tx: Prisma.TransactionClient, pollId: string) {
-  const poll = await tx.poll.findUnique({
-    where: { id: pollId },
-    include: {
-      responses: {
-        orderBy: [{ waitlistOrder: "asc" }, { createdAt: "asc" }]
-      }
-    }
-  });
-
-  if (!poll || poll.manualControl) return;
-
-  const activeCount = poll.responses.filter((response) => response.response === PollResponseChoice.PRESENT && !response.isWaitlisted).length;
-  let availableSlots = poll.capacity - activeCount;
-
-  if (availableSlots <= 0) return;
-
-  const waitlisted = poll.responses.filter((response) => response.isWaitlisted);
-  for (const response of waitlisted) {
-    if (availableSlots <= 0) break;
-    await tx.pollResponse.update({
-      where: { id: response.id },
-      data: {
-        isWaitlisted: false,
-        waitlistOrder: null,
-        response: PollResponseChoice.PRESENT,
-        managedAt: new Date()
-      }
-    });
-    availableSlots -= 1;
-  }
 }
 
 export async function createPoll(formData: FormData) {
@@ -340,7 +308,7 @@ export async function updatePollCapacity(formData: FormData) {
         data: { capacity: payload.capacity }
       });
 
-      await promoteWaitlisted(tx, existing.id);
+      await promoteWaitlistedResponses(tx, existing.id);
       return updated;
     });
 
@@ -428,7 +396,7 @@ export async function removePollParticipant(formData: FormData) {
         }
       });
 
-      await promoteWaitlisted(tx, poll.id);
+      await promoteWaitlistedResponses(tx, poll.id);
     });
 
     revalidatePollViews(payload.pollId);
@@ -577,7 +545,7 @@ export async function movePollParticipant(formData: FormData) {
         });
       }
 
-      await promoteWaitlisted(tx, poll.id);
+      await promoteWaitlistedResponses(tx, poll.id);
     });
 
     revalidatePollViews(payload.pollId);
@@ -644,7 +612,7 @@ export async function respondToPoll(formData: FormData) {
       });
 
       if (!poll.manualControl) {
-        await promoteWaitlisted(tx, poll.id);
+        await promoteWaitlistedResponses(tx, poll.id);
       }
     });
 
@@ -727,55 +695,20 @@ export async function createMatchFromPoll(formData: FormData) {
 
 export async function syncPollAutomation() {
   const session = await requireAdmin();
-  const now = new Date();
-  const affectedIds = new Set<string>();
-  let closedCount = 0;
-  let promotedCount = 0;
+  const result = await syncPolls(prisma);
 
-  const openPolls = await prisma.poll.findMany({
-    where: { status: PollStatus.OPEN },
-    include: { responses: true }
-  });
-
-  for (const poll of openPolls) {
-    await prisma.$transaction(async (tx) => {
-      const beforeWaitlisted = poll.responses.filter((response) => response.isWaitlisted).length;
-      await promoteWaitlisted(tx, poll.id);
-      const refreshed = await tx.poll.findUnique({
-        where: { id: poll.id },
-        include: { responses: true }
-      });
-      if (!refreshed) return;
-
-      const afterWaitlisted = refreshed.responses.filter((response) => response.isWaitlisted).length;
-      if (afterWaitlisted < beforeWaitlisted) {
-        promotedCount += beforeWaitlisted - afterWaitlisted;
-        affectedIds.add(refreshed.id);
-      }
-
-      if (refreshed.closesAt && refreshed.closesAt.getTime() <= now.getTime()) {
-        await tx.poll.update({
-          where: { id: refreshed.id },
-          data: { status: PollStatus.CLOSED }
-        });
-        closedCount += 1;
-        affectedIds.add(refreshed.id);
-      }
-    });
-  }
-
-  if (closedCount > 0 || promotedCount > 0) {
+  if (result.closedPolls > 0 || result.promotedParticipants > 0) {
     await prisma.notification.create({
       data: {
         userId: session.user.id,
         type: NotificationType.GENERAL,
         title: "Synchronisation automatique",
-        message: `Sondages clôturés: ${closedCount}. Promotions en attente traitées: ${promotedCount}.`
+        message: `Sondages traités: ${result.processedPolls}. Sondages clôturés: ${result.closedPolls}. Promotions en attente traitées: ${result.promotedParticipants}.`
       }
     });
   }
 
-  for (const pollId of affectedIds) {
+  for (const pollId of result.affectedPollIds) {
     revalidatePollViews(pollId);
   }
   revalidatePath("/admin/sondages");
