@@ -91,6 +91,10 @@ export default async function AdminPollDetailPage({
   const whatsappMessage = buildPollWhatsappMessage({
     title: poll.title,
     statusLabel: pollStatusLabels[poll.status],
+    matchDate: format(poll.matchDate, "EEEE d MMMM yyyy", { locale: fr }),
+    startTime: poll.startTime,
+    endTime: poll.endTime,
+    location: poll.location,
     capacity: poll.capacity,
     presentCount,
     waitlistCount,
@@ -244,11 +248,11 @@ export default async function AdminPollDetailPage({
                   </div>
                   <div>
                     <Label htmlFor="opensAt">Ouverture</Label>
-                    <Input id="opensAt" name="opensAt" type="datetime-local" />
+                    <Input id="opensAt" name="opensAt" type="datetime-local" defaultValue={poll.opensAt ? format(poll.opensAt, "yyyy-MM-dd'T'HH:mm") : ""} />
                   </div>
                   <div>
                     <Label htmlFor="closesAt">Clôture</Label>
-                    <Input id="closesAt" name="closesAt" type="datetime-local" />
+                    <Input id="closesAt" name="closesAt" type="datetime-local" defaultValue={poll.closesAt ? format(poll.closesAt, "yyyy-MM-dd'T'HH:mm") : ""} />
                   </div>
                   <div>
                     <Label htmlFor="status">Statut</Label>

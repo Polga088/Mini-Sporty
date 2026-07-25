@@ -14,6 +14,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NoticeBanner } from "@/components/notice-banner";
+import { PwaControls } from "@/components/pwa-controls";
 import { respondToPoll } from "@/app/actions/polls";
 import { redirect } from "next/navigation";
 import { Bell, ClipboardList, Wallet, Volleyball, History, AlertTriangle } from "lucide-react";
@@ -98,6 +99,8 @@ export default async function EspacePage({ searchParams }: { searchParams?: Prom
         <StatCard label="Alertes" value={unreadCount} hint="Notifications non lues" icon={<Bell className="h-5 w-5" />} tone={lowBalance ? "warning" : "info"} />
         <StatCard label="Dernières opérations" value={transactions.length} hint="Transactions récentes" icon={<History className="h-5 w-5" />} />
       </section>
+
+      <PwaControls layout="card" />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">

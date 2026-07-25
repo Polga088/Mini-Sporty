@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { LayoutDashboard, Users, BadgeEuro, Volleyball, ClipboardList, ReceiptText, PiggyBank, Settings, FileDown, Bell, ChartColumn } from "lucide-react";
 import { Role } from "@prisma/client";
 import { canAccessSensitiveAdmin, canManageSport } from "@/lib/permissions";
+import { PwaControls } from "@/components/pwa-controls";
 
 const baseLinks = [
   { href: "/espace", label: "Dashboard", icon: LayoutDashboard },
@@ -61,6 +62,9 @@ export function AppNav({ role }: { role?: Role | null }) {
           </Link>
         );
       })}
+      <div className="pt-3 md:hidden">
+        <PwaControls />
+      </div>
     </nav>
   );
 }

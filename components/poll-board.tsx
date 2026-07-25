@@ -110,9 +110,19 @@ export function PollBoard({
                     className="cursor-grab rounded-2xl border bg-white p-4 shadow-sm active:cursor-grabbing"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-slate-900">{participant.user.name}</p>
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
+                          {participant.user.name
+                            .split(" ")
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((part) => part[0]?.toUpperCase())
+                            .join("")}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900">{participant.user.name}</p>
                         <p className="text-sm text-slate-600">{participant.user.email}</p>
+                        </div>
                       </div>
                       <Badge variant={column === "PRESENT" ? "success" : column === "WAITLISTED" ? "warning" : "default"}>
                         {column === "WAITLISTED" && participant.waitlistOrder ? `#${participant.waitlistOrder}` : columnLabels[column]}

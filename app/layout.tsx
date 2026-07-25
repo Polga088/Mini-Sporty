@@ -5,20 +5,21 @@ import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
   title: {
-    default: "Friday Match Wallet",
-    template: "%s · Friday Match Wallet"
+    default: "Mini Sporty",
+    template: "%s · Mini Sporty"
   },
-  description: "Gestion interne du match de football du vendredi",
+  description: "Gestion du match du vendredi, portefeuille et sondages",
   manifest: "/manifest.webmanifest",
-  applicationName: "Friday Match Wallet",
+  applicationName: "Mini Sporty",
   appleWebApp: {
     capable: true,
-    title: "Friday Match Wallet",
+    title: "Mini Sporty",
     statusBarStyle: "default"
   },
   icons: [
     { rel: "icon", url: "/icon-192.svg" },
-    { rel: "apple-touch-icon", url: "/icon-192.svg" }
+    { rel: "apple-touch-icon", url: "/icon-192.svg" },
+    { rel: "icon", url: "/icon-maskable.svg" }
   ]
 };
 

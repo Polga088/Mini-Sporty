@@ -46,6 +46,10 @@ export function pollResponseVariant(response: PollResponseChoice): "default" | "
 export function buildPollWhatsappMessage(params: {
   title: string;
   statusLabel: string;
+  matchDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
   capacity: number;
   presentCount: number;
   waitlistCount: number;
@@ -59,8 +63,12 @@ export function buildPollWhatsappMessage(params: {
     `${params.organizationName ?? "Friday Match Wallet"} partage un sondage.`,
     `Sondage: ${params.title}`,
     `Statut: ${params.statusLabel}`,
+    `Date: ${params.matchDate}`,
+    `Horaire: ${params.startTime} - ${params.endTime}`,
+    `Terrain: ${params.location}`,
     `Capacité: ${params.capacity}`,
     `Présents: ${params.presentCount}`,
+    `Places restantes: ${Math.max(0, params.capacity - params.presentCount)}`,
     `Liste d’attente: ${params.waitlistCount}`,
     `Montant du match: ${formatDh(params.matchAmount)}`,
     params.link ? `Lien direct: ${params.link}` : "",
@@ -73,6 +81,11 @@ export function buildPollWhatsappMessage(params: {
 
 export function buildPollReminderWhatsappMessage(params: {
   title: string;
+  matchDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  matchAmount: string;
   closesAt: string;
   link?: string;
 }) {
@@ -80,6 +93,9 @@ export function buildPollReminderWhatsappMessage(params: {
     `Bonjour,`,
     "",
     `Rappel: le sondage "${params.title}" se clôture le ${params.closesAt}.`,
+    `Match: ${params.matchDate} · ${params.startTime} - ${params.endTime}`,
+    `Terrain: ${params.location}`,
+    `Prix joueur: ${formatDh(params.matchAmount)}`,
     params.link ? `Lien direct: ${params.link}` : "",
     "",
     "Merci."
@@ -90,6 +106,11 @@ export function buildPollReminderWhatsappMessage(params: {
 
 export function buildPollCancellationWhatsappMessage(params: {
   title: string;
+  matchDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  matchAmount: string;
   reason?: string;
   link?: string;
 }) {
@@ -97,6 +118,9 @@ export function buildPollCancellationWhatsappMessage(params: {
     `Bonjour,`,
     "",
     `Le sondage "${params.title}" a été annulé.`,
+    `Match: ${params.matchDate} · ${params.startTime} - ${params.endTime}`,
+    `Terrain: ${params.location}`,
+    `Prix joueur: ${formatDh(params.matchAmount)}`,
     params.reason ? `Motif: ${params.reason}` : "",
     params.link ? `Lien direct: ${params.link}` : "",
     "",

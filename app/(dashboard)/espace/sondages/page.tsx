@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { NoticeBanner } from "@/components/notice-banner";
-import { FormSubmitButton } from "@/components/form-submit-button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { pollResponseLabels, pollStatusLabels, pollStatusVariant } from "@/lib/polls";
 import { respondToPoll } from "@/app/actions/polls";
 import { redirect } from "next/navigation";
@@ -88,6 +88,7 @@ export default async function PlayerPollsPage({ searchParams }: { searchParams?:
               const myResponse = poll.responses[0];
               const presentCount = poll.responses.filter((response) => response.response === "PRESENT" && !response.isWaitlisted).length;
               const waitlistCount = poll.responses.filter((response) => response.isWaitlisted).length;
+              const remainingSlots = Math.max(0, poll.capacity - presentCount);
 
               return (
                 <div key={poll.id} className="rounded-2xl border p-4">
@@ -100,10 +101,11 @@ export default async function PlayerPollsPage({ searchParams }: { searchParams?:
                     </div>
                     <Badge variant={pollStatusVariant(poll.status)}>{pollStatusLabels[poll.status]}</Badge>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
+                  <div className="mt-3 grid gap-3 text-sm md:grid-cols-4">
                     <p>{presentCount}/{poll.capacity} présents</p>
+                    <p>{remainingSlots} place(s) restante(s)</p>
                     <p>{waitlistCount} en attente</p>
-                    <p>{poll.matchDate ? format(poll.matchDate, "dd/MM/yyyy", { locale: fr }) : ""}</p>
+                    <p>{poll.closesAt ? `Clôture le ${format(poll.closesAt, "dd/MM/yyyy HH:mm", { locale: fr })}` : "Sans clôture programmée"}</p>
                   </div>
 
                   <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
@@ -133,7 +135,9 @@ export default async function PlayerPollsPage({ searchParams }: { searchParams?:
                             Peut-être
                           </label>
                         </div>
-                        <FormSubmitButton>Enregistrer ma réponse</FormSubmitButton>
+                        <ConfirmButton type="submit" className="w-full" message="Confirmer l’enregistrement de cette réponse ?">
+                          Enregistrer ma réponse
+                        </ConfirmButton>
                       </form>
                     ) : (
                       <div className="rounded-2xl border p-4 text-sm text-slate-600">

@@ -50,7 +50,9 @@ export function AppShell({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <PwaControls />
+            <div className="hidden md:block">
+              <PwaControls />
+            </div>
             <p className="hidden text-right text-sm text-slate-600 md:block">{organizationName}</p>
             <form
               action={async () => {
