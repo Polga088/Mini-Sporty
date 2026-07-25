@@ -9,6 +9,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"]
+    include: ["tests/**/*.test.ts"],
+    fileParallelism: false,
+    maxWorkers: 1,
+    minWorkers: 1,
+    setupFiles: ["./tests/vitest.setup.ts"]
   }
 });

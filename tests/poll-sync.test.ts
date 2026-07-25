@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NotificationType, PollResponseChoice, PollStatus, Role } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { decimal } from "../lib/money";
@@ -7,6 +7,7 @@ import { syncPolls } from "../lib/poll-sync";
 let adminId = "";
 const cleanupEmails: string[] = [];
 const cleanupPollIds: string[] = [];
+const TEST_PREFIX = "sync-poll-suite";
 
 beforeAll(async () => {
   const admin = await prisma.user.findUnique({
@@ -21,7 +22,7 @@ beforeAll(async () => {
   adminId = admin.id;
 });
 
-afterEach(async () => {
+async function cleanupFixtures() {
   if (cleanupPollIds.length > 0) {
     await prisma.poll.deleteMany({
       where: {
@@ -37,10 +38,40 @@ afterEach(async () => {
       }
     });
   }
+
+  await prisma.pollResponse.deleteMany({
+    where: {
+      poll: {
+        title: { startsWith: `${TEST_PREFIX}-` }
+      }
+    }
+  });
+
+  await prisma.notification.deleteMany({
+    where: {
+      user: {
+        email: { startsWith: `${TEST_PREFIX}-` }
+      }
+    }
+  });
+
+  await prisma.poll.deleteMany({
+    where: {
+      title: { startsWith: `${TEST_PREFIX}-` }
+    }
+  });
+}
+
+beforeEach(async () => {
+  await cleanupFixtures();
+});
+
+afterEach(async () => {
+  await cleanupFixtures();
 });
 
 async function createTempPlayer(label: string) {
-  const email = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
+  const email = `${TEST_PREFIX}-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.local`;
   cleanupEmails.push(email);
 
   return prisma.user.create({
@@ -56,13 +87,13 @@ async function createTempPlayer(label: string) {
 async function createExpiredPoll() {
   const poll = await prisma.poll.create({
     data: {
-      title: `Synchronisation ${Date.now()}`,
+      title: `${TEST_PREFIX}-poll-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       description: null,
-      matchTitle: "Match de test",
+      matchTitle: `${TEST_PREFIX}-match`,
       matchDate: new Date("2026-08-01T20:00:00.000Z"),
       startTime: "20:00",
       endTime: "21:30",
-      location: "Terrain Central",
+      location: `${TEST_PREFIX}-terrain`,
       capacity: 2,
       matchAmount: decimal(10),
       allowResponseChanges: true,

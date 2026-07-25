@@ -17,8 +17,8 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
     "polls:sync": "tsx scripts/sync-polls.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run --no-file-parallelism",
+    "test:watch": "vitest --no-file-parallelism"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.0",
