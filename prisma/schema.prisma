@@ -121,6 +121,11 @@ enum PollResponseChoice {
   MAYBE
 }
 
+enum PresenceSource {
+  QR
+  MANUAL
+}
+
 model User {
   id                       String                    @id @default(cuid())
   name                     String
@@ -145,6 +150,8 @@ model User {
   createdPolls             Poll[]                    @relation("PollCreatedBy")
   pollResponses            PollResponse[]
   pollManagedResponses     PollResponse[]            @relation("PollManagedBy")
+  presenceLogs             MatchPresenceLog[]        @relation("MatchPresenceUser")
+  presenceActions          MatchPresenceLog[]        @relation("MatchPresenceActor")
 }
 
 model Wallet {
@@ -214,6 +221,11 @@ model Match {
   status               MatchStatus        @default(DRAFT)
   cancellationDeadline DateTime?
   notes                String?
+  qrTokenId            String?            @unique
+  qrTokenHash          String?
+  qrTokenExpiresAt     DateTime?
+  qrDisabledAt         DateTime?
+  qrGeneratedAt        DateTime?
   createdById          String
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
@@ -221,6 +233,7 @@ model Match {
   poll                 Poll?              @relation("PollToMatch")
   participants         MatchParticipant[]
   expenses             Expense[]
+  presenceLogs         MatchPresenceLog[]
 
   @@index([matchDate, status])
   @@index([createdById, createdAt])
@@ -240,10 +253,29 @@ model MatchParticipant {
   updatedAt     DateTime               @updatedAt
   match         Match                  @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  presenceLogs MatchPresenceLog[]
 
   @@unique([matchId, userId])
   @@index([matchId])
   @@index([userId, status])
+}
+
+model MatchPresenceLog {
+  id             String         @id @default(cuid())
+  matchId        String
+  userId         String
+  participantId  String?
+  actorId        String?
+  source         PresenceSource
+  createdAt      DateTime       @default(now())
+  match          Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user           User           @relation("MatchPresenceUser", fields: [userId], references: [id], onDelete: Cascade)
+  participant    MatchParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  actor          User?          @relation("MatchPresenceActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([matchId, createdAt])
+  @@index([userId, createdAt])
+  @@index([participantId])
 }
 
 model Contribution {

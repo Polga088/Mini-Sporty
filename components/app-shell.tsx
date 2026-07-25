@@ -8,6 +8,7 @@ import { Prisma, Role } from "@prisma/client";
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { roleLabel } from "@/lib/permissions";
+import { PwaControls } from "@/components/pwa-controls";
 
 export function AppShell({
   title,
@@ -49,6 +50,7 @@ export function AppShell({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <PwaControls />
             <p className="hidden text-right text-sm text-slate-600 md:block">{organizationName}</p>
             <form
               action={async () => {

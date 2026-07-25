@@ -171,6 +171,51 @@ const messages: Record<string, { title: string; description: string; variant: "s
     description: "Le statut de présence du joueur a été mis à jour.",
     variant: "success"
   },
+  presence_confirmed: {
+    title: "Présence confirmée",
+    description: "Votre présence a été enregistrée via QR.",
+    variant: "success"
+  },
+  invalid_token: {
+    title: "QR invalide",
+    description: "Le lien de présence n’est pas valide.",
+    variant: "danger"
+  },
+  disabled_token: {
+    title: "QR désactivé",
+    description: "Ce QR a été désactivé par un administrateur.",
+    variant: "warning"
+  },
+  token_expired: {
+    title: "QR expiré",
+    description: "Le QR n’est plus actif pour ce match.",
+    variant: "warning"
+  },
+  presence_match_cancelled: {
+    title: "Match annulé",
+    description: "La présence ne peut pas être confirmée sur un match annulé.",
+    variant: "warning"
+  },
+  match_finished: {
+    title: "Match terminé",
+    description: "La présence ne peut plus être confirmée pour ce match.",
+    variant: "warning"
+  },
+  not_participant: {
+    title: "Participation introuvable",
+    description: "Vous devez être inscrit au match pour confirmer votre présence.",
+    variant: "danger"
+  },
+  qr_regenerated: {
+    title: "QR régénéré",
+    description: "Le QR du prochain match a été renouvelé.",
+    variant: "success"
+  },
+  qr_disabled: {
+    title: "QR désactivé",
+    description: "Le QR du prochain match a été désactivé.",
+    variant: "warning"
+  },
   capacity_reached: {
     title: "Capacité atteinte",
     description: "Le match est complet. Placez le joueur en liste d’attente.",

@@ -18,6 +18,7 @@ import {
   MatchStatus,
   NotificationType,
   Prisma,
+  PresenceSource,
   WalletTransactionType
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -758,7 +759,7 @@ export async function cancelParticipation(formData: FormData) {
 }
 
 export async function markParticipantAttendance(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const payload = participantAttendanceSchemaInput.parse({
     participantId: formData.get("participantId"),
     matchId: formData.get("matchId"),
@@ -783,10 +784,24 @@ export async function markParticipantAttendance(formData: FormData) {
       throw new BusinessError("invalid_state");
     }
 
-    await prisma.matchParticipant.update({
-      where: { id: participant.id },
-      data: { status: payload.attendanceStatus }
-    });
+    if (participant.status !== payload.attendanceStatus) {
+      await prisma.$transaction(async (tx) => {
+        await tx.matchParticipant.update({
+          where: { id: participant.id },
+          data: { status: payload.attendanceStatus }
+        });
+
+        await tx.matchPresenceLog.create({
+          data: {
+            matchId: participant.matchId,
+            userId: participant.userId,
+            participantId: participant.id,
+            actorId: session.user.id,
+            source: PresenceSource.MANUAL
+          }
+        });
+      });
+    }
 
     revalidateMatchViews(payload.matchId);
     detailSuccess(payload.matchId, "attendance_marked");
