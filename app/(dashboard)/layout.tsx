@@ -12,6 +12,7 @@ export default async function DashboardLayout({
 }>) {
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
+  if (session.user.mustChangePassword) redirect("/mot-de-passe");
 
   const role = session.user.role;
   const isStaff = canManageSport(role);

@@ -41,7 +41,10 @@ export async function GET(request: Request) {
   return new NextResponse(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename=statistiques-${period}.csv`
+      "content-disposition": `attachment; filename=statistiques-${period}.csv`,
+      "cache-control": "no-store, max-age=0",
+      pragma: "no-cache",
+      "x-content-type-options": "nosniff"
     }
   });
 }

@@ -244,7 +244,7 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
 
       <Card>
         <CardTitle>Liste des matchs</CardTitle>
-        <div className="mt-4 overflow-hidden rounded-2xl border">
+        <div className="mt-4 overflow-x-auto overflow-y-visible rounded-2xl border">
           <table className="hidden w-full text-left text-sm md:table">
             <thead className="bg-slate-50 text-slate-600">
               <tr>

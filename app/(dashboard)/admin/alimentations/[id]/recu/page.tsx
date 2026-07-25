@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
 import { buildTopUpWhatsappMessage, paymentMethodLabel } from "@/lib/topup-receipt";
+import { canAccessTopUpReceipt } from "@/lib/receipt-access";
 import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,8 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { NoticeBanner } from "@/components/notice-banner";
 import { getAppSettings } from "@/lib/settings";
 import { ReceiptActions } from "./receipt-actions";
+import { ReceiptShareControls } from "./receipt-share-controls";
+import { unstable_noStore as noStore } from "next/cache";
 
 type QueryParams = Record<string, string | string[] | undefined>;
 
@@ -28,14 +31,14 @@ export default async function TopUpReceiptPage({
   params: Promise<{ id: string }>;
   searchParams?: Promise<QueryParams>;
 }) {
+  noStore();
   const session = await auth();
-  if (!session?.user?.id) redirect("/connexion");
-  if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { id } = await params;
   const query = (await Promise.resolve(searchParams ?? {})) as QueryParams;
   const success = firstValue(query.success);
   const error = firstValue(query.error);
+  const shareToken = firstValue(query.token);
 
   const topUp = await prisma.walletTopUp.findUnique({
     where: { id },
@@ -46,14 +49,18 @@ export default async function TopUpReceiptPage({
     }
   });
 
-  if (
-    !topUp ||
-    topUp.status !== TopUpStatus.APPROVED ||
-    !topUp.receiptNumber ||
-    !topUp.receiptIssuedAt ||
-    !topUp.user.wallet ||
-    !topUp.reviewedBy
-  ) {
+  if (!topUp) {
+    notFound();
+  }
+
+  if (!canAccessTopUpReceipt({ user: session?.user, topUp, shareToken })) {
+    if (!session?.user?.id && !shareToken) {
+      redirect("/connexion");
+    }
+    notFound();
+  }
+
+  if (topUp.status !== TopUpStatus.APPROVED || !topUp.receiptNumber || !topUp.receiptIssuedAt || !topUp.user.wallet || !topUp.reviewedBy) {
     notFound();
   }
 
@@ -71,6 +78,13 @@ export default async function TopUpReceiptPage({
   }
 
   const settings = await getAppSettings();
+  const shareLinkActive =
+    Boolean(topUp.receiptShareTokenHash) &&
+    Boolean(topUp.receiptShareTokenExpiresAt) &&
+    !topUp.receiptShareTokenRevokedAt;
+  const receiptPdfUrl = shareToken
+    ? `/admin/alimentations/${topUp.id}/recu/pdf?token=${encodeURIComponent(shareToken)}`
+    : `/admin/alimentations/${topUp.id}/recu/pdf`;
 
   const whatsappMessage = buildTopUpWhatsappMessage({
     playerName: topUp.user.name,
@@ -143,10 +157,16 @@ export default async function TopUpReceiptPage({
 
         <div className="mt-6 flex flex-wrap gap-3 print:hidden">
           <ReceiptActions
-            pdfUrl={`/admin/alimentations/${topUp.id}/recu/pdf`}
+            pdfUrl={receiptPdfUrl}
             receiptNumber={topUp.receiptNumber}
             whatsappMessage={whatsappMessage}
           />
+          {session?.user?.id && canAccessSensitiveAdmin(session.user.role) ? (
+            <ReceiptShareControls
+              topUpId={topUp.id}
+              activeUntil={shareLinkActive && topUp.receiptShareTokenExpiresAt ? format(topUp.receiptShareTokenExpiresAt, "dd/MM/yyyy à HH:mm", { locale: fr }) : null}
+            />
+          ) : null}
           <Button asChild variant="ghost">
             <Link href="/admin/alimentations">Retour à la liste</Link>
           </Button>

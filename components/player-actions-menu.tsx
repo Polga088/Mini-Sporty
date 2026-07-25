@@ -16,7 +16,8 @@ export function PlayerActionsMenu({
   disableAction,
   enableAction,
   resetPasswordAction,
-  deleteAction
+  deleteAction,
+  showViewLink = true
 }: {
   playerId: string;
   playerName: string;
@@ -26,6 +27,7 @@ export function PlayerActionsMenu({
   enableAction: ServerAction;
   resetPasswordAction: ServerAction;
   deleteAction: ServerAction;
+  showViewLink?: boolean;
 }) {
   const statusAction = isActive ? disableAction : enableAction;
   const statusLabel = isActive ? "Désactiver le joueur" : "Réactiver le joueur";
@@ -33,12 +35,14 @@ export function PlayerActionsMenu({
   return (
     <ActionMenu label="Actions">
       <div className="flex flex-col gap-2">
-        <Button asChild variant="ghost" className="w-full min-h-10 justify-start gap-2">
-          <Link href={`/admin/joueurs/${playerId}`}>
-            <Eye className="h-4 w-4 shrink-0" />
-            Voir la fiche
-          </Link>
-        </Button>
+        {showViewLink ? (
+          <Button asChild variant="ghost" className="w-full min-h-10 justify-start gap-2">
+            <Link href={`/admin/joueurs/${playerId}`}>
+              <Eye className="h-4 w-4 shrink-0" />
+              Voir la fiche
+            </Link>
+          </Button>
+        ) : null}
         <form action={statusAction}>
           <input type="hidden" name="playerId" value={playerId} />
           <input type="hidden" name="returnTo" value={returnTo} />

@@ -1,6 +1,6 @@
 import { formatDh } from "@/lib/money";
 import { PaymentMethod, TopUpStatus } from "@prisma/client";
-import { randomUUID } from "crypto";
+import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH: "Espèces",
@@ -41,8 +41,40 @@ export function topUpStatusVariant(status: TopUpStatus): "default" | "success" |
 export function generateReceiptNumber(issuedAt = new Date()) {
   const dateStamp = issuedAt.toISOString().slice(0, 10).replaceAll("-", "");
   const timeStamp = issuedAt.toISOString().slice(11, 19).replaceAll(":", "");
-  const suffix = randomUUID().split("-")[0].toUpperCase();
+  const suffix = randomBytes(4).toString("hex").toUpperCase();
   return `FMW-${dateStamp}-${timeStamp}-${suffix}`;
+}
+
+export function generateReceiptShareToken() {
+  return randomBytes(32).toString("base64url");
+}
+
+export function hashReceiptShareToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function isReceiptShareTokenValid(params: {
+  token?: string | null;
+  tokenHash?: string | null;
+  expiresAt?: Date | null;
+  revokedAt?: Date | null;
+}) {
+  if (!params.token || !params.tokenHash || !params.expiresAt || params.revokedAt) {
+    return false;
+  }
+
+  if (params.expiresAt.getTime() <= Date.now()) {
+    return false;
+  }
+
+  const expected = Buffer.from(params.tokenHash, "hex");
+  const received = Buffer.from(hashReceiptShareToken(params.token), "hex");
+
+  if (expected.length !== received.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, received);
 }
 
 export function buildTopUpWhatsappMessage(params: {

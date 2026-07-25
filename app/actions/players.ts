@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decimal } from "@/lib/money";
@@ -11,10 +12,12 @@ import {
   manualWalletAdjustmentSchema,
   updatePlayerSchema
 } from "@/lib/validators";
-import { Prisma, Role, WalletTransactionType } from "@prisma/client";
+import { Prisma, Role, SecurityAuditType, WalletTransactionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+
+const PASSWORD_RESET_FLASH_COOKIE = "mini-sporty-password-reset-flash";
 
 class BusinessError extends Error {
   code: string;
@@ -76,6 +79,48 @@ function passwordResetPassword() {
   return `Fm-${randomBytes(4).toString("hex")}-2026!`;
 }
 
+async function setPasswordResetFlashCookie(playerId: string, temporaryPassword: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(PASSWORD_RESET_FLASH_COOKIE, encodeURIComponent(JSON.stringify({ playerId, temporaryPassword })), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/admin/joueurs",
+    maxAge: 300
+  });
+}
+
+export async function readPasswordResetFlashCookie(playerId: string) {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(PASSWORD_RESET_FLASH_COOKIE)?.value;
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw)) as { playerId?: string; temporaryPassword?: string };
+    if (parsed.playerId !== playerId || !parsed.temporaryPassword) {
+      return null;
+    }
+
+    return parsed.temporaryPassword;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearPasswordResetFlash() {
+  const cookieStore = await cookies();
+  cookieStore.set(PASSWORD_RESET_FLASH_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/admin/joueurs",
+    maxAge: 0
+  });
+}
+
 export async function createPlayer(formData: FormData) {
   const session = await requireAdmin();
   let playerId: string;
@@ -100,6 +145,9 @@ export async function createPlayer(formData: FormData) {
           email: payload.email,
           phone: normalizeOptionalText(payload.phone),
           passwordHash,
+          passwordChangedAt: new Date(),
+          mustChangePassword: true,
+          sessionVersion: 0,
           role: Role.PLAYER,
           isActive: true
         }
@@ -243,7 +291,7 @@ export async function enablePlayer(formData: FormData) {
 }
 
 export async function resetPlayerPassword(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const playerId = playerIdFromForm(formData);
   const returnTo = returnToFromForm(formData);
 
@@ -264,10 +312,30 @@ export async function resetPlayerPassword(formData: FormData) {
     const temporaryPassword = passwordResetPassword();
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
 
-    await prisma.user.update({
-      where: { id: player.id },
-      data: { passwordHash }
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: player.id },
+        data: {
+          passwordHash,
+          passwordChangedAt: new Date(),
+          sessionVersion: { increment: 1 },
+          mustChangePassword: true
+        }
+      });
+
+      await tx.securityAudit.create({
+        data: {
+          type: SecurityAuditType.PASSWORD_RESET,
+          actorId: session.user.id,
+          targetUserId: player.id,
+          metadata: {
+            reason: "admin_reset"
+          }
+        }
+      });
     });
+
+    await setPasswordResetFlashCookie(player.id, temporaryPassword);
 
     revalidatePath("/admin/joueurs");
     revalidatePath(`/admin/joueurs/${player.id}`);

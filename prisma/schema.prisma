@@ -107,6 +107,10 @@ enum NotificationType {
   GENERAL
 }
 
+enum SecurityAuditType {
+  PASSWORD_RESET
+}
+
 enum PollStatus {
   DRAFT
   OPEN
@@ -131,6 +135,9 @@ model User {
   name                     String
   email                    String                    @unique
   passwordHash             String
+  passwordChangedAt        DateTime?
+  sessionVersion           Int                       @default(0)
+  mustChangePassword       Boolean                   @default(false)
   role                     Role                      @default(PLAYER)
   phone                    String?
   isActive                 Boolean                   @default(true)
@@ -152,6 +159,8 @@ model User {
   pollManagedResponses     PollResponse[]            @relation("PollManagedBy")
   presenceLogs             MatchPresenceLog[]        @relation("MatchPresenceUser")
   presenceActions          MatchPresenceLog[]        @relation("MatchPresenceActor")
+  securityAuditActions     SecurityAudit[]            @relation("SecurityAuditActor")
+  securityAuditTargets     SecurityAudit[]            @relation("SecurityAuditTarget")
 }
 
 model Wallet {
@@ -198,6 +207,9 @@ model WalletTopUp {
   receiptNumber         String?     @unique
   receiptIssuedAt       DateTime?
   receiptGeneratedById  String?
+  receiptShareTokenHash String?
+  receiptShareTokenExpiresAt DateTime?
+  receiptShareTokenRevokedAt DateTime?
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -206,6 +218,21 @@ model WalletTopUp {
 
   @@index([userId, status])
   @@index([status, createdAt])
+}
+
+model SecurityAudit {
+  id            String             @id @default(cuid())
+  type          SecurityAuditType
+  actorId       String?
+  targetUserId  String?
+  metadata      Json?
+  createdAt     DateTime           @default(now())
+  actor         User?              @relation("SecurityAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser    User?              @relation("SecurityAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetUserId, createdAt])
 }
 
 model Match {

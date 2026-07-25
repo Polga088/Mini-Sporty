@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
     const error = new Error("REDIRECT");
     (error as Error & { url?: string }).url = url;
     throw error;
-  })
+  }),
+  cookies: new Map<string, { value: string; options?: Record<string, unknown> }>()
 }));
 
 vi.mock("@/auth", () => ({
@@ -23,6 +24,20 @@ vi.mock("next/cache", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: () => ({
+    get(name: string) {
+      return mocks.cookies.get(name);
+    },
+    set(name: string, value: string, options?: Record<string, unknown>) {
+      mocks.cookies.set(name, { value, options });
+    },
+    delete(name: string) {
+      mocks.cookies.delete(name);
+    }
+  })
 }));
 
 let adminId = "";
@@ -48,6 +63,7 @@ afterEach(() => {
   mocks.auth.mockReset();
   mocks.revalidatePath.mockReset();
   mocks.redirect.mockClear();
+  mocks.cookies.clear();
 });
 
 function adminSession() {
@@ -88,7 +104,11 @@ async function expectRedirect(promise: Promise<unknown>, expectedUrl: string | R
   }
 
   expect(error).toMatchObject({ message: "REDIRECT" });
-  expect(error?.url ?? "").toMatch(expectedUrl);
+  if (expectedUrl instanceof RegExp) {
+    expect(error?.url ?? "").toMatch(expectedUrl);
+  } else {
+    expect(error?.url ?? "").toBe(expectedUrl);
+  }
 }
 
 async function cleanupByEmail(email: string) {

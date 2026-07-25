@@ -19,7 +19,7 @@ Mini-application interne pour gérer le match de football du vendredi.
 1. Charger NVM et activer Node 22.11.0.
 2. Vérifier la version avec `node --version` et obtenir `v22.11.0`.
 3. Copier `.env.example` vers `.env.local`.
-4. Renseigner `DATABASE_URL` et `NEXTAUTH_SECRET`.
+4. Renseigner `DATABASE_URL`, `AUTH_URL`, `AUTH_SECRET` et `AUTH_TRUST_HOST=true`.
 5. Installer les dépendances avec `npm install` ou `npm ci`.
 6. Lancer `prisma migrate dev`.
 7. Lancer `prisma db seed`.
@@ -54,6 +54,48 @@ Mini-application interne pour gérer le match de football du vendredi.
 ```bash
 gunzip -c /var/backups/mini-sporty/mini-sporty-YYYYMMDD-HHMMSS.sql.gz | psql "$DATABASE_URL"
 ```
+
+## Sécurité HTTP et Nginx
+
+En production, la plateforme applique déjà des en-têtes de base côté Next.js:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`
+
+Variables d’environnement recommandées en production:
+
+- `AUTH_URL=https://sporty.omjep.ma`
+- `AUTH_TRUST_HOST=true`
+- `AUTH_SECRET=<secret robuste et long>`
+- `DATABASE_URL=postgresql://...`
+
+Proposition Nginx complémentaire:
+
+```nginx
+location /_next/static/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+Pour les exports CSV, les reçus PDF et les écrans sensibles, conserver `no-store` côté application afin d’éviter tout cache intermédiaire persistant.
 
 ## PWA
 

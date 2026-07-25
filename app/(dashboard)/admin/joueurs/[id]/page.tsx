@@ -11,10 +11,19 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
+import { PasswordResetModal } from "@/components/password-reset-modal";
 import { ConfirmButton } from "@/components/confirm-button";
 import { PlayerActionsMenu } from "@/components/player-actions-menu";
 import { canAccessSensitiveAdmin } from "@/lib/permissions";
-import { createManualWalletAdjustment, disablePlayer, deletePlayer, enablePlayer, resetPlayerPassword, updatePlayer } from "@/app/actions/players";
+import {
+  createManualWalletAdjustment,
+  disablePlayer,
+  deletePlayer,
+  enablePlayer,
+  readPasswordResetFlashCookie,
+  resetPlayerPassword,
+  updatePlayer
+} from "@/app/actions/players";
 import { Role } from "@prisma/client";
 
 type QueryParams = Record<string, string | string[] | undefined>;
@@ -82,9 +91,11 @@ export default async function PlayerDetailPage({
 
   const balance = player.wallet?.balance ?? 0;
   const walletTransactions = player.wallet?.transactions ?? [];
+  const temporaryPassword = await readPasswordResetFlashCookie(player.id);
 
   return (
     <div className="space-y-6">
+      {temporaryPassword ? <PasswordResetModal playerName={player.name} temporaryPassword={temporaryPassword} /> : null}
       <NoticeBanner success={success} error={error} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -154,6 +165,7 @@ export default async function PlayerDetailPage({
               enableAction={enablePlayer}
               resetPasswordAction={resetPlayerPassword}
               deleteAction={deletePlayer}
+              showViewLink={false}
             />
           </div>
         </Card>
@@ -238,7 +250,7 @@ export default async function PlayerDetailPage({
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardTitle>Historique des transactions</CardTitle>
-          <div className="mt-4 overflow-hidden rounded-2xl border">
+          <div className="mt-4 overflow-x-auto overflow-y-visible rounded-2xl border">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>

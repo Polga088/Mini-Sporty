@@ -17,6 +17,7 @@ import { PresenceQrActions } from "@/components/presence-qr-actions";
 import { getOrCreatePresenceQr } from "@/lib/presence-service";
 import { MatchStatus } from "@prisma/client";
 import { tryBuildPresenceQrSvg } from "@/lib/qr";
+import { unstable_noStore as noStore } from "next/cache";
 
 type QueryParams = Record<string, string | string[] | undefined>;
 
@@ -25,6 +26,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 export default async function AdminSettingsPage({ searchParams }: { searchParams?: Promise<QueryParams> }) {
+  noStore();
   const session = await auth();
   if (!session?.user?.id) redirect("/connexion");
   if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");

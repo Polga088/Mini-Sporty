@@ -7,18 +7,13 @@ import { formatDh } from "@/lib/money";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { paymentMethodLabel } from "@/lib/topup-receipt";
-import { canAccessSensitiveAdmin } from "@/lib/permissions";
+import { canAccessTopUpReceipt } from "@/lib/receipt-access";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.redirect(new URL("/connexion", request.url));
-  }
-  if (!canAccessSensitiveAdmin(session.user.role)) {
-    return NextResponse.redirect(new URL("/espace", request.url));
-  }
 
   const { id } = await params;
+  const token = new URL(request.url).searchParams.get("token");
   const topUp = await prisma.walletTopUp.findUnique({
     where: { id },
     include: {
@@ -27,7 +22,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
   });
 
-  if (!topUp || topUp.status !== TopUpStatus.APPROVED || !topUp.receiptNumber || !topUp.receiptIssuedAt || !topUp.reviewedBy || !topUp.user.wallet) {
+  if (!topUp) {
+    return NextResponse.json({ message: "Not found" }, { status: 404 });
+  }
+
+  if (!canAccessTopUpReceipt({ user: session?.user, topUp, shareToken: token })) {
+    if (!session?.user?.id && !token) {
+      return NextResponse.redirect(new URL("/connexion", request.url));
+    }
+    return NextResponse.json({ message: "Not found" }, { status: 404 });
+  }
+
+  if (topUp.status !== TopUpStatus.APPROVED || !topUp.receiptNumber || !topUp.receiptIssuedAt || !topUp.reviewedBy || !topUp.user.wallet) {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
 
@@ -68,7 +74,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   return new NextResponse(pdf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="recu-${topUp.receiptNumber}.pdf"`
+      "Content-Disposition": `attachment; filename="recu-${topUp.receiptNumber}.pdf"`,
+      "Cache-Control": "no-store, max-age=0",
+      Pragma: "no-cache",
+      "X-Content-Type-Options": "nosniff"
     }
   });
 }

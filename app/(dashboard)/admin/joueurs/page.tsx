@@ -232,7 +232,7 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
           </p>
         </div>
 
-        <div className="mt-4 hidden overflow-hidden rounded-2xl border lg:block">
+        <div className="mt-4 hidden overflow-x-auto overflow-y-visible rounded-2xl border lg:block">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>

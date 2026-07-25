@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { decimal, formatDh } from "@/lib/money";
 import { lowBalanceNotification } from "@/lib/notifications";
-import { generateReceiptNumber } from "@/lib/topup-receipt";
+import { generateReceiptNumber, generateReceiptShareToken, hashReceiptShareToken } from "@/lib/topup-receipt";
 import { getAppSettings } from "@/lib/settings";
 import { topUpIdSchema, topUpSchema } from "@/lib/validators";
 import { NotificationType, Prisma, TopUpStatus, WalletTransactionType } from "@prisma/client";
@@ -294,4 +294,61 @@ export async function reviewTopUp(formData: FormData) {
     return rejectTopUp(formData);
   }
   return approveTopUp(formData);
+}
+
+async function requireReceiptAdmin() {
+  const session = await requireAdmin();
+  return session;
+}
+
+export async function generateTopUpReceiptShareLink(topUpId: string) {
+  await requireReceiptAdmin();
+
+  const topUp = await prisma.walletTopUp.findUnique({
+    where: { id: topUpId },
+    select: { id: true, status: true, receiptNumber: true }
+  });
+
+  if (!topUp || topUp.status !== TopUpStatus.APPROVED || !topUp.receiptNumber) {
+    throw new BusinessError("not_found");
+  }
+
+  const token = generateReceiptShareToken();
+  const tokenHash = hashReceiptShareToken(token);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  await prisma.walletTopUp.update({
+    where: { id: topUpId },
+    data: {
+      receiptShareTokenHash: tokenHash,
+      receiptShareTokenExpiresAt: expiresAt,
+      receiptShareTokenRevokedAt: null
+    }
+  });
+
+  revalidateTopUpViews(topUpId);
+
+  return {
+    token,
+    expiresAt: expiresAt.toISOString(),
+    shareUrl: `${process.env.APP_URL ?? process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/admin/alimentations/${topUpId}/recu?token=${encodeURIComponent(token)}`
+  };
+}
+
+export async function revokeTopUpReceiptShareLink(topUpId: string) {
+  await requireReceiptAdmin();
+
+  await prisma.walletTopUp.updateMany({
+    where: {
+      id: topUpId,
+      receiptShareTokenHash: { not: null }
+    },
+    data: {
+      receiptShareTokenHash: null,
+      receiptShareTokenExpiresAt: null,
+      receiptShareTokenRevokedAt: new Date()
+    }
+  });
+
+  revalidateTopUpViews(topUpId);
 }

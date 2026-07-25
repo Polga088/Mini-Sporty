@@ -361,7 +361,7 @@ export default async function AdminMatchDetailPage({
           Le solde affiché est celui du joueur au moment de la confirmation. Vous pouvez l’ajouter, le confirmer avec débit automatique ou le placer en liste d’attente.
         </CardDescription>
         {actionsAllowed ? (
-          <div className="mt-4 hidden overflow-hidden rounded-2xl border md:block">
+          <div className="mt-4 hidden overflow-x-auto overflow-y-visible rounded-2xl border md:block">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
@@ -457,7 +457,7 @@ export default async function AdminMatchDetailPage({
 
       <Card>
         <CardTitle>Participants</CardTitle>
-        <div className="mt-4 overflow-hidden rounded-2xl border">
+        <div className="mt-4 overflow-x-auto overflow-y-visible rounded-2xl border">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
