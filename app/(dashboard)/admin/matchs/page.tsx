@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Eye, RotateCcw, X } from "lucide-react";
 import { MatchStatus, Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -231,8 +232,11 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
           </div>
           <div className="md:col-span-4 flex flex-wrap gap-3">
             <Button type="submit">Appliquer</Button>
-            <Button asChild variant="outline">
-              <Link href="/admin/matchs">Réinitialiser</Link>
+            <Button asChild variant="outline" className="gap-2">
+              <Link href="/admin/matchs">
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Réinitialiser
+              </Link>
             </Button>
           </div>
         </form>
@@ -288,8 +292,11 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
                       <td className="px-4 py-3">{formatDh(match.participationFee)}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          <Button asChild variant="ghost">
-                            <Link href={`/admin/matchs/${match.id}`}>Voir</Link>
+                          <Button asChild variant="ghost" className="gap-2">
+                            <Link href={`/admin/matchs/${match.id}`}>
+                              <Eye className="h-4 w-4" aria-hidden="true" />
+                              Voir le match
+                            </Link>
                           </Button>
                           {match.status !== MatchStatus.CANCELLED ? (
                             <form action={cancelMatch}>
@@ -297,8 +304,10 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
                               <ConfirmButton
                                 type="submit"
                                 variant="destructive"
+                                className="gap-2"
                                 message={`Annuler ${match.title} et rembourser les joueurs payés ?`}
                               >
+                                <X className="h-4 w-4" aria-hidden="true" />
                                 Annuler
                               </ConfirmButton>
                             </form>
@@ -341,8 +350,11 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
                       <p>Prix/joueur: {formatDh(match.participationFee)}</p>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Button asChild variant="ghost">
-                        <Link href={`/admin/matchs/${match.id}`}>Voir</Link>
+                      <Button asChild variant="ghost" className="gap-2">
+                        <Link href={`/admin/matchs/${match.id}`}>
+                          <Eye className="h-4 w-4" aria-hidden="true" />
+                          Voir le match
+                        </Link>
                       </Button>
                       {match.status !== MatchStatus.CANCELLED ? (
                         <form action={cancelMatch}>
@@ -350,8 +362,10 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
                           <ConfirmButton
                             type="submit"
                             variant="destructive"
+                            className="gap-2"
                             message={`Annuler ${match.title} et rembourser les joueurs payés ?`}
                           >
+                            <X className="h-4 w-4" aria-hidden="true" />
                             Annuler
                           </ConfirmButton>
                         </form>

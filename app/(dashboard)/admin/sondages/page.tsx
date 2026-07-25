@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { RotateCcw } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
@@ -128,8 +129,11 @@ export default async function AdminPollsPage({ searchParams }: { searchParams?: 
           </div>
           <div className="md:col-span-3 flex flex-wrap gap-3">
             <Button type="submit">Appliquer</Button>
-            <Button asChild variant="outline">
-              <Link href="/admin/sondages">Réinitialiser</Link>
+            <Button asChild variant="outline" className="gap-2">
+              <Link href="/admin/sondages">
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Réinitialiser
+              </Link>
             </Button>
           </div>
         </form>

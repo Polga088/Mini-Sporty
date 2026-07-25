@@ -31,7 +31,7 @@ export async function getOrCreatePresenceQr(matchId: string, force = false): Pro
     return {
       match,
       token,
-      url: buildPresenceUrl(process.env.AUTH_URL ?? "http://localhost:3000", token),
+      url: buildPresenceUrl(token),
       isActive: true
     };
   }
@@ -62,7 +62,7 @@ export async function getOrCreatePresenceQr(matchId: string, force = false): Pro
   return {
     match,
     token: token.token,
-    url: buildPresenceUrl(process.env.AUTH_URL ?? "http://localhost:3000", token.token),
+    url: buildPresenceUrl(token.token),
     isActive: true
   };
 }

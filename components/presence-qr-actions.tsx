@@ -23,24 +23,26 @@ export function PresenceQrActions({
               Ouvrir le QR
             </a>
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={async () => {
-              await navigator.clipboard.writeText(url);
-            }}
-          >
-            Copier le lien
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => window.print()}>
-            Imprimer
-          </Button>
           {downloadHref ? (
-            <Button asChild variant="ghost">
-              <a href={downloadHref} download={`qr-${matchId}.svg`}>
-                Télécharger
-              </a>
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(url);
+                }}
+              >
+                Copier le lien
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => window.print()}>
+                Imprimer
+              </Button>
+              <Button asChild variant="ghost">
+                <a href={downloadHref} download={`qr-${matchId}.svg`}>
+                  Télécharger
+                </a>
+              </Button>
+            </>
           ) : null}
         </>
       ) : (

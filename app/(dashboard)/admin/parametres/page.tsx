@@ -9,7 +9,6 @@ import { updateGeneralSettings } from "@/app/actions/settings";
 import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { buildPresenceQrSvg } from "@/lib/qr";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -17,6 +16,7 @@ import { readLatestBackupInfo } from "@/lib/backup";
 import { PresenceQrActions } from "@/components/presence-qr-actions";
 import { getOrCreatePresenceQr } from "@/lib/presence-service";
 import { MatchStatus } from "@prisma/client";
+import { tryBuildPresenceQrSvg } from "@/lib/qr";
 
 type QueryParams = Record<string, string | string[] | undefined>;
 
@@ -41,7 +41,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
     orderBy: { matchDate: "asc" }
   });
   const nextMatchQr = nextMatch ? await getOrCreatePresenceQr(nextMatch.id) : null;
-  const qrSvg = nextMatchQr?.url ? buildPresenceQrSvg(nextMatchQr.url) : "";
+  const qrSvg = nextMatchQr?.url ? await tryBuildPresenceQrSvg(nextMatchQr.url) : null;
 
   return (
     <div className="space-y-6">
@@ -83,10 +83,16 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
             <div className="rounded-3xl border bg-white p-4">
               {nextMatchQr?.url ? (
                 <>
-                  <div className="overflow-hidden rounded-2xl border bg-white p-3">
-                    <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
-                  </div>
-                  <p className="mt-3 text-xs text-slate-500">{nextMatchQr.url}</p>
+                  {qrSvg ? (
+                    <div className="overflow-hidden rounded-2xl border bg-white p-3">
+                      <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      Le QR code n’a pas pu être généré.
+                    </div>
+                  )}
+                  <p className="mt-3 break-all text-xs text-slate-500">{nextMatchQr.url}</p>
                 </>
               ) : (
                 <div className="rounded-2xl border border-dashed p-4 text-sm text-slate-600">Le QR est désactivé. Régénérez-le pour afficher le code.</div>
@@ -111,7 +117,7 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
                 </Card>
               </div>
 
-              <PresenceQrActions matchId={nextMatch.id} url={nextMatchQr?.url} svg={qrSvg} />
+              <PresenceQrActions matchId={nextMatch.id} url={nextMatchQr?.url} svg={qrSvg ?? ""} />
             </div>
           </div>
         </Card>

@@ -46,6 +46,12 @@ export function verifyPresenceToken(matchId: string, tokenId: string, token: str
   }
 }
 
-export function buildPresenceUrl(origin: string, token: string) {
-  return new URL(`/presence/${token}`, origin).toString();
+export function buildPresenceUrl(token: string) {
+  const origin =
+    process.env.APP_URL ??
+    process.env.NEXTAUTH_URL ??
+    process.env.AUTH_URL ??
+    "https://sporty.omjep.ma";
+
+  return `${origin.replace(/\/$/, "")}/presence/${encodeURIComponent(token)}`;
 }

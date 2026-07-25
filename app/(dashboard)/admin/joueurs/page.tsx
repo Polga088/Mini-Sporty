@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { RotateCcw } from "lucide-react";
 import { Role } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -176,8 +177,11 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
           </div>
           <div className="md:col-span-4 flex flex-wrap gap-3">
             <FormSubmitButton>Appliquer</FormSubmitButton>
-            <Button variant="outline" type="button" asChild>
-              <Link href="/admin/joueurs">Réinitialiser</Link>
+            <Button variant="outline" type="button" asChild className="gap-2">
+              <Link href="/admin/joueurs">
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                Réinitialiser
+              </Link>
             </Button>
           </div>
         </form>
