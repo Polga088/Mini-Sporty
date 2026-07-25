@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const originalEnv = {
   APP_URL: process.env.APP_URL,
   AUTH_URL: process.env.AUTH_URL,
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  NODE_ENV: process.env.NODE_ENV
 };
 
 afterEach(() => {
@@ -11,6 +12,7 @@ afterEach(() => {
   process.env.AUTH_URL = originalEnv.AUTH_URL;
   process.env.NEXTAUTH_URL = originalEnv.NEXTAUTH_URL;
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   vi.resetModules();
 });
 
@@ -20,6 +22,14 @@ describe("presence url", () => {
     const { buildPresenceUrl } = await import("../lib/presence");
 
     expect(buildPresenceUrl("abc/def ?")).toBe("https://sporty.omjep.ma/presence/abc%2Fdef%20%3F");
+  });
+
+  it("retombe sur l'origine publique en production si l'URL locale est configurée", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.APP_URL = "http://localhost:3000/";
+    const { buildPresenceUrl } = await import("../lib/presence");
+
+    expect(buildPresenceUrl("token-123")).toBe("https://sporty.omjep.ma/presence/token-123");
   });
 });
 

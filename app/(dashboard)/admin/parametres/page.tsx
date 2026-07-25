@@ -73,29 +73,44 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
             <div>
               <CardTitle>QR du prochain match</CardTitle>
               <CardDescription className="max-w-2xl">
-                Les joueurs peuvent confirmer leur présence via ce QR sécurisé. Le token expire automatiquement.
+                Les joueurs peuvent confirmer leur présence via ce QR sécurisé. Le token expire automatiquement et le lien public reste canonique.
               </CardDescription>
             </div>
             <Badge variant={nextMatch?.qrDisabledAt ? "danger" : "success"}>{nextMatch?.qrDisabledAt ? "Désactivé" : "Actif"}</Badge>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
-            <div className="rounded-3xl border bg-white p-4">
+          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(280px,360px)_1fr]">
+            <div className="rounded-3xl border bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Lien public</p>
+                  <p className="mt-1 text-sm text-slate-600">https://sporty.omjep.ma/presence/&lt;token&gt;</p>
+                </div>
+                <Badge variant={nextMatchQr?.url ? "success" : "danger"}>{nextMatchQr?.url ? "Prêt" : "Inactif"}</Badge>
+              </div>
+
               {nextMatchQr?.url ? (
-                <>
-                  {qrSvg ? (
-                    <div className="overflow-hidden rounded-2xl border bg-white p-3">
-                      <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                      Le QR code n’a pas pu être généré.
-                    </div>
-                  )}
-                  <p className="mt-3 break-all text-xs text-slate-500">{nextMatchQr.url}</p>
-                </>
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    {qrSvg ? (
+                      <div className="mx-auto max-w-[280px] overflow-hidden rounded-2xl bg-white p-3 shadow-sm">
+                        <div dangerouslySetInnerHTML={{ __html: qrSvg }} />
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                        Le QR code n’a pas pu être généré.
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-dashed bg-white px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">URL de présence</p>
+                    <p className="mt-2 break-all text-sm text-slate-700">{nextMatchQr.url}</p>
+                  </div>
+                </div>
               ) : (
-                <div className="rounded-2xl border border-dashed p-4 text-sm text-slate-600">Le QR est désactivé. Régénérez-le pour afficher le code.</div>
+                <div className="mt-4 rounded-2xl border border-dashed p-4 text-sm text-slate-600">
+                  Le QR est désactivé. Régénérez-le pour afficher le code.
+                </div>
               )}
             </div>
 

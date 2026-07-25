@@ -47,11 +47,12 @@ export function verifyPresenceToken(matchId: string, tokenId: string, token: str
 }
 
 export function buildPresenceUrl(token: string) {
-  const origin =
-    process.env.APP_URL ??
-    process.env.NEXTAUTH_URL ??
-    process.env.AUTH_URL ??
-    "https://sporty.omjep.ma";
+  const fallbackOrigin = "https://sporty.omjep.ma";
+  const configuredOrigin = process.env.APP_URL ?? process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? fallbackOrigin;
+  const normalizedOrigin = configuredOrigin.replace(/\/$/, "");
+  const isProduction = process.env.NODE_ENV === "production";
+  const isLocalOrigin = /localhost|127\.0\.0\.1|:3000/i.test(normalizedOrigin);
+  const origin = isProduction && isLocalOrigin ? fallbackOrigin : normalizedOrigin || fallbackOrigin;
 
-  return `${origin.replace(/\/$/, "")}/presence/${encodeURIComponent(token)}`;
+  return `${origin}/presence/${encodeURIComponent(token)}`;
 }
