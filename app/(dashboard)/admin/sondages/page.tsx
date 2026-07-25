@@ -128,7 +128,7 @@ export default async function AdminPollsPage({ searchParams }: { searchParams?: 
           </div>
           <div className="md:col-span-3 flex flex-wrap gap-3">
             <Button type="submit">Appliquer</Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="outline">
               <Link href="/admin/sondages">Réinitialiser</Link>
             </Button>
           </div>

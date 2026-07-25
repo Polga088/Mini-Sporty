@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { PollStatus, Role, MatchStatus, PollResponseChoice } from "@prisma/client";
+import { NotificationType, PollStatus, Role, MatchStatus, PollResponseChoice } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { createMatchFromPoll, createPoll, openPoll, respondToPoll } from "../app/actions/polls";
 import { decimal } from "../lib/money";
@@ -171,6 +171,10 @@ describe("actions sondages", () => {
     const poll = await prisma.poll.findFirst({ where: { title } });
     if (!poll) throw new Error("Sondage introuvable.");
     cleanupPollIds.push(poll.id);
+    const activePlayers = await prisma.user.findMany({
+      where: { role: Role.PLAYER, isActive: true },
+      select: { id: true }
+    });
 
     await expectRedirect(
       openPoll(
@@ -180,6 +184,22 @@ describe("actions sondages", () => {
       ),
       `/admin/sondages/${poll.id}?success=poll_opened`
     );
+
+    const notifications = await prisma.notification.findMany({
+      where: {
+        type: NotificationType.POLL_OPENED,
+        title: "Sondage ouvert",
+        message: {
+          contains: title
+        }
+      },
+      include: {
+        user: true
+      }
+    });
+
+    expect(notifications).toHaveLength(activePlayers.length);
+    expect(notifications.every((notification) => notification.user.id === notification.userId)).toBe(true);
 
     const player = await createTempPlayer(35);
     mocks.auth.mockResolvedValue(playerSession(player.id));

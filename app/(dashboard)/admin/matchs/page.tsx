@@ -231,7 +231,7 @@ export default async function AdminMatchesPage({ searchParams }: { searchParams?
           </div>
           <div className="md:col-span-4 flex flex-wrap gap-3">
             <Button type="submit">Appliquer</Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="outline">
               <Link href="/admin/matchs">Réinitialiser</Link>
             </Button>
           </div>

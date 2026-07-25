@@ -176,7 +176,7 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
           </div>
           <div className="md:col-span-4 flex flex-wrap gap-3">
             <FormSubmitButton>Appliquer</FormSubmitButton>
-            <Button variant="ghost" type="button" asChild>
+            <Button variant="outline" type="button" asChild>
               <Link href="/admin/joueurs">Réinitialiser</Link>
             </Button>
           </div>

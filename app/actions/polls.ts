@@ -238,14 +238,14 @@ export async function openPoll(formData: FormData) {
   await requireAdmin();
   const pollId = String(formData.get("pollId") ?? "");
   const poll = await setPollStatus(pollId, PollStatus.OPEN);
-  const players = await prisma.user.findMany({
+  const recipients = await prisma.user.findMany({
     where: { role: Role.PLAYER, isActive: true },
     select: { id: true }
   });
-  if (players.length > 0) {
+  if (recipients.length > 0) {
     await prisma.notification.createMany({
-      data: players.map((player) => ({
-        userId: player.id,
+      data: recipients.map((recipient) => ({
+        userId: recipient.id,
         ...pollOpenedNotification(poll.title)
       }))
     });

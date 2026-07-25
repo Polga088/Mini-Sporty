@@ -152,7 +152,7 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
           </div>
           <div className="flex items-end gap-3">
             <Button type="submit">Appliquer</Button>
-            <Button asChild variant="ghost">
+            <Button asChild variant="outline">
               <Link href="/admin/alimentations">Réinitialiser</Link>
             </Button>
           </div>
