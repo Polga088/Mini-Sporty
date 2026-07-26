@@ -8,6 +8,7 @@ import { canAccessTopUpReceipt } from "../lib/receipt-access";
 import { generateReceiptShareToken, hashReceiptShareToken } from "../lib/topup-receipt";
 import { changeMyPassword } from "../app/actions/account";
 import {
+  clearPasswordResetFlash,
   readPasswordResetFlashCookie,
   resetPlayerPassword
 } from "../app/actions/players";
@@ -275,12 +276,17 @@ describe("sécurité renforcée", () => {
     expect(updated?.mustChangePassword).toBe(true);
     expect(updated?.sessionVersion).toBe(1);
     expect(updated?.passwordChangedAt).not.toBeNull();
-    expect(await readPasswordResetFlashCookie(player.id)).toMatch(/^Fm-[A-Fa-f0-9]{8}-2026!$/);
+    const temporaryPassword = await readPasswordResetFlashCookie(player.id);
+    expect(temporaryPassword).toMatch(/^Fm-[A-Fa-f0-9]{8}-2026!$/);
+    expect(await readPasswordResetFlashCookie(player.id)).toBe(temporaryPassword);
 
     const flashCookie = [...mocks.cookies.values()][0];
     expect(flashCookie?.options?.httpOnly).toBe(true);
     expect(flashCookie?.options?.sameSite).toBe("lax");
     expect(flashCookie?.options?.secure).toBe(true);
+
+    await clearPasswordResetFlash();
+    expect(await readPasswordResetFlashCookie(player.id)).toBeNull();
 
     const audits = await prisma.securityAudit.findMany({
       where: { type: "PASSWORD_RESET", targetUserId: player.id }
