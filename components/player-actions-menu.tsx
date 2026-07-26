@@ -34,50 +34,54 @@ export function PlayerActionsMenu({
 
   return (
     <ActionMenu label="Actions">
-      <div className="flex flex-col gap-2">
-        {showViewLink ? (
-          <Button asChild variant="ghost" className="w-full min-h-10 justify-start gap-2">
-            <Link href={`/admin/joueurs/${playerId}`}>
-              <Eye className="h-4 w-4 shrink-0" />
-              Voir la fiche
-            </Link>
-          </Button>
-        ) : null}
-        <form action={statusAction}>
-          <input type="hidden" name="playerId" value={playerId} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <ConfirmButton
-            type="submit"
-            variant={isActive ? "destructive" : "default"}
-            className="w-full min-h-10 justify-start gap-2"
-            message={isActive ? `Désactiver ${playerName} ?` : `Réactiver ${playerName} ?`}
-          >
-            <Power className="h-4 w-4 shrink-0" />
-            {statusLabel}
-          </ConfirmButton>
-        </form>
-        <form action={resetPasswordAction}>
-          <input type="hidden" name="playerId" value={playerId} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <ConfirmButton type="submit" variant="outline" className="w-full min-h-10 justify-start gap-2" message={`Réinitialiser le mot de passe de ${playerName} ?`}>
-            <RotateCcw className="h-4 w-4 shrink-0" />
-            Réinitialiser
-          </ConfirmButton>
-        </form>
-        <form action={deleteAction}>
-          <input type="hidden" name="playerId" value={playerId} />
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <ConfirmButton
-            type="submit"
-            variant="destructive"
-            className="w-full min-h-10 justify-start gap-2"
-            message={`Supprimer définitivement ${playerName} ? Cette action est irréversible.`}
-          >
-            <Trash2 className="h-4 w-4 shrink-0" />
-            Supprimer définitivement
-          </ConfirmButton>
-        </form>
-      </div>
+      {(close) => (
+        <div className="flex flex-col gap-2">
+          {showViewLink ? (
+            <Button asChild variant="ghost" className="w-full min-h-10 justify-start gap-2">
+              <Link href={`/admin/joueurs/${playerId}`} onClick={close}>
+                <Eye className="h-4 w-4 shrink-0" />
+                Voir la fiche
+              </Link>
+            </Button>
+          ) : null}
+          <form action={statusAction}>
+            <input type="hidden" name="playerId" value={playerId} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <ConfirmButton
+              type="submit"
+              variant={isActive ? "destructive" : "default"}
+              className="w-full min-h-10 justify-start gap-2"
+              message={isActive ? `Désactiver ${playerName} ?` : `Réactiver ${playerName} ?`}
+              onClick={close}
+            >
+              <Power className="h-4 w-4 shrink-0" />
+              {statusLabel}
+            </ConfirmButton>
+          </form>
+          <form action={resetPasswordAction}>
+            <input type="hidden" name="playerId" value={playerId} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <ConfirmButton type="submit" variant="outline" className="w-full min-h-10 justify-start gap-2" message={`Réinitialiser le mot de passe de ${playerName} ?`} onClick={close}>
+              <RotateCcw className="h-4 w-4 shrink-0" />
+              Réinitialiser
+            </ConfirmButton>
+          </form>
+          <form action={deleteAction}>
+            <input type="hidden" name="playerId" value={playerId} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <ConfirmButton
+              type="submit"
+              variant="destructive"
+              className="w-full min-h-10 justify-start gap-2"
+              message={`Supprimer définitivement ${playerName} ? Cette action est irréversible.`}
+              onClick={close}
+            >
+              <Trash2 className="h-4 w-4 shrink-0" />
+              Supprimer définitivement
+            </ConfirmButton>
+          </form>
+        </div>
+      )}
     </ActionMenu>
   );
 }
