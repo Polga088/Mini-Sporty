@@ -8,6 +8,7 @@ import {
   rejectTopUp,
   requestTopUp
 } from "../app/actions/wallet";
+import { ensureApprovedTopUpReceipt } from "../lib/topup-receipt-ensure";
 import { GET as receiptPdfRoute } from "../app/(dashboard)/admin/alimentations/[id]/recu/pdf/route";
 
 const mocks = vi.hoisted(() => ({
@@ -343,5 +344,124 @@ describe("actions alimentations", () => {
     expect(ready.status).toBe(200);
     expect(ready.headers.get("content-type")).toContain("application/pdf");
     expect(ready.headers.get("content-disposition")).toContain(`recu-${(await prisma.walletTopUp.findUnique({ where: { id: topUp.id } }))?.receiptNumber}.pdf`);
+  });
+
+  it("rattrape un reçu manquant pour une alimentation déjà validée sans recréditer le wallet", async () => {
+    const player = await createTempPlayer(20);
+    if (!player.wallet) throw new Error("Wallet manquant.");
+
+    const topUp = await prisma.walletTopUp.create({
+      data: {
+        userId: player.id,
+        amount: decimal(11),
+        paymentMethod: "CASH",
+        status: TopUpStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date()
+      }
+    });
+
+    const transaction = await prisma.walletTransaction.create({
+      data: {
+        walletId: player.wallet.id,
+        type: WalletTransactionType.TOP_UP,
+        amount: decimal(11),
+        balanceBefore: decimal(20),
+        balanceAfter: decimal(31),
+        description: "Alimentation validée de test",
+        referenceType: "WalletTopUp",
+        referenceId: topUp.id,
+        createdById: adminId
+      }
+    });
+
+    await prisma.wallet.update({
+      where: { id: player.wallet.id },
+      data: { balance: decimal(31) }
+    });
+
+    const ensured = await ensureApprovedTopUpReceipt(topUp.id, adminId);
+    expect(ensured?.receiptNumber).toMatch(/^FMW-/);
+    expect(ensured?.receiptIssuedAt).not.toBeNull();
+
+    const wallet = await prisma.wallet.findUnique({
+      where: { id: player.wallet.id },
+      include: { transactions: true }
+    });
+    expect(Number(wallet?.balance ?? 0)).toBe(31);
+    expect(wallet?.transactions.filter((item) => item.referenceId === topUp.id)).toHaveLength(1);
+    expect(wallet?.transactions.find((item) => item.id === transaction.id)).toBeTruthy();
+
+    mocks.auth.mockResolvedValue(adminSession());
+    const pdf = await receiptPdfRoute(new Request(`http://localhost:3000/admin/alimentations/${topUp.id}/recu/pdf`), {
+      params: Promise.resolve({ id: topUp.id })
+    });
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers.get("content-type")).toContain("application/pdf");
+  });
+
+  it("ne régénère pas un reçu déjà existant", async () => {
+    const player = await createTempPlayer(0);
+    const issuedAt = new Date("2026-07-27T10:00:00.000Z");
+    const topUp = await prisma.walletTopUp.create({
+      data: {
+        userId: player.id,
+        amount: decimal(6),
+        paymentMethod: "OTHER",
+        status: TopUpStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: issuedAt,
+        receiptNumber: `FMW-20260727-100000-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+        receiptIssuedAt: issuedAt,
+        receiptGeneratedById: adminId
+      }
+    });
+
+    const first = await ensureApprovedTopUpReceipt(topUp.id, adminId);
+    const second = await ensureApprovedTopUpReceipt(topUp.id, adminId);
+
+    expect(first?.receiptNumber).toBe(topUp.receiptNumber);
+    expect(second?.receiptNumber).toBe(topUp.receiptNumber);
+  });
+
+  it("refuse le téléchargement du reçu à un joueur non autorisé", async () => {
+    const owner = await createTempPlayer(0);
+    const attacker = await createTempPlayer(0);
+    if (!owner.wallet) throw new Error("Wallet propriétaire manquant.");
+
+    const topUp = await prisma.walletTopUp.create({
+      data: {
+        userId: owner.id,
+        amount: decimal(9),
+        paymentMethod: "CASH",
+        status: TopUpStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        receiptNumber: `FMW-20260727-110000-${Math.random().toString(16).slice(2, 10).toUpperCase()}`,
+        receiptIssuedAt: new Date(),
+        receiptGeneratedById: adminId
+      }
+    });
+
+    await prisma.walletTransaction.create({
+      data: {
+        walletId: owner.wallet.id,
+        type: WalletTransactionType.TOP_UP,
+        amount: decimal(9),
+        balanceBefore: decimal(0),
+        balanceAfter: decimal(9),
+        description: "Alimentation validée de test",
+        referenceType: "WalletTopUp",
+        referenceId: topUp.id,
+        createdById: adminId
+      }
+    });
+
+    mocks.auth.mockResolvedValue(playerSession(attacker.id));
+    const response = await receiptPdfRoute(new Request(`http://localhost:3000/admin/alimentations/${topUp.id}/recu/pdf`), {
+      params: Promise.resolve({ id: topUp.id })
+    });
+
+    expect(response.status).toBe(404);
   });
 });

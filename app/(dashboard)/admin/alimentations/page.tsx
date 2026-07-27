@@ -2,15 +2,18 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { RotateCcw } from "lucide-react";
-import { Prisma, TopUpStatus } from "@prisma/client";
+import { Prisma, TopUpStatus, WalletTransactionType } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
 import {
+  buildTopUpWhatsappMessage,
   paymentMethodLabel,
   topUpStatusLabel,
   topUpStatusVariant
 } from "@/lib/topup-receipt";
+import { ensureApprovedTopUpReceipt } from "@/lib/topup-receipt-ensure";
+import { getAppSettings } from "@/lib/settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -78,6 +81,22 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
   if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { q, status, page, success, error } = await normalizeQuery(searchParams);
+  const settings = await getAppSettings();
+
+  const approvedWithoutReceipt = await prisma.walletTopUp.findMany({
+    where: {
+      status: TopUpStatus.APPROVED,
+      OR: [
+        { receiptNumber: null },
+        { receiptIssuedAt: null }
+      ]
+    },
+    select: { id: true }
+  });
+
+  await Promise.all(
+    approvedWithoutReceipt.map((topUp) => ensureApprovedTopUpReceipt(topUp.id, session.user.id))
+  );
 
   const rawTopUps = await prisma.walletTopUp.findMany({
     orderBy: { createdAt: "desc" },
@@ -97,6 +116,20 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
   const totalPages = Math.max(1, Math.ceil(topUps.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const visibleTopUps = topUps.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const visibleApprovedIds = visibleTopUps
+    .filter((topUp) => topUp.status === TopUpStatus.APPROVED && Boolean(topUp.receiptNumber))
+    .map((topUp) => topUp.id);
+  const receiptTransactions = visibleApprovedIds.length > 0
+    ? await prisma.walletTransaction.findMany({
+        where: {
+          referenceType: "WalletTopUp",
+          referenceId: { in: visibleApprovedIds },
+          type: WalletTransactionType.TOP_UP
+        },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
+  const transactionByTopUpId = new Map(receiptTransactions.map((transaction) => [transaction.referenceId, transaction]));
 
   const pendingCount = rawTopUps.filter((topUp) => topUp.status === TopUpStatus.PENDING).length;
   const approvedCount = rawTopUps.filter((topUp) => topUp.status === TopUpStatus.APPROVED).length;
@@ -169,7 +202,19 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
         ) : (
           visibleTopUps.map((topUp) => {
             const receiptUrl = `/admin/alimentations/${topUp.id}/recu`;
+            const receiptPdfUrl = `${receiptUrl}/pdf`;
             const receiptReady = topUp.status === TopUpStatus.APPROVED && Boolean(topUp.receiptNumber);
+            const receiptTransaction = transactionByTopUpId.get(topUp.id);
+            const whatsappMessage = receiptReady && receiptTransaction && topUp.receiptNumber
+              ? buildTopUpWhatsappMessage({
+                  playerName: topUp.user.name,
+                  amount: topUp.amount.toString(),
+                  receiptNumber: topUp.receiptNumber,
+                  balanceAfter: receiptTransaction.balanceAfter.toString(),
+                  template: settings.whatsappTemplate
+                })
+              : null;
+            const whatsappUrl = whatsappMessage ? `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}` : null;
 
             return (
               <Card key={topUp.id} className="space-y-4">
@@ -198,7 +243,7 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
                   </div>
                   <div className="rounded-xl border p-3">
                     <p className="text-xs uppercase tracking-wide text-slate-500">Reçu</p>
-                    <p className="mt-1 text-sm font-medium">{topUp.receiptNumber ?? "Non généré"}</p>
+                    <p className="mt-1 text-sm font-medium">{receiptReady ? topUp.receiptNumber : "Aucun reçu"}</p>
                   </div>
                   <div className="rounded-xl border p-3">
                     <p className="text-xs uppercase tracking-wide text-slate-500">Validé par</p>
@@ -240,9 +285,19 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
                           </form>
                         </>
                       ) : receiptReady ? (
-                        <Button asChild>
-                          <Link href={receiptUrl}>Consulter le reçu</Link>
-                        </Button>
+                        <>
+                          <Button asChild>
+                            <Link href={receiptUrl}>Voir le reçu</Link>
+                          </Button>
+                          <Button asChild variant="secondary">
+                            <Link href={receiptPdfUrl}>Télécharger le reçu</Link>
+                          </Button>
+                          {whatsappUrl ? (
+                            <Button asChild variant="ghost">
+                              <a href={whatsappUrl} target="_blank" rel="noreferrer">Partager sur WhatsApp</a>
+                            </Button>
+                          ) : null}
+                        </>
                       ) : (
                         <Badge variant={topUpStatusVariant(topUp.status)}>{topUpStatusLabel(topUp.status)}</Badge>
                       )}
@@ -253,7 +308,10 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
                 {receiptReady ? (
                   <div className="flex flex-wrap gap-2">
                     <Button asChild variant="secondary">
-                      <Link href={receiptUrl}>Reçu imprimable</Link>
+                      <Link href={receiptPdfUrl}>Télécharger le reçu</Link>
+                    </Button>
+                    <Button asChild variant="ghost">
+                      <Link href={receiptUrl}>Voir le reçu</Link>
                     </Button>
                   </div>
                 ) : null}

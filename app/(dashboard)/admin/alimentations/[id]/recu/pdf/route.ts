@@ -7,6 +7,7 @@ import { formatDh } from "@/lib/money";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { paymentMethodLabel } from "@/lib/topup-receipt";
+import { ensureApprovedTopUpReceipt } from "@/lib/topup-receipt-ensure";
 import { canAccessTopUpReceipt } from "@/lib/receipt-access";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +32,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.redirect(new URL("/connexion", request.url));
     }
     return NextResponse.json({ message: "Not found" }, { status: 404 });
+  }
+
+  if (topUp.status === TopUpStatus.APPROVED && (!topUp.receiptNumber || !topUp.receiptIssuedAt)) {
+    await ensureApprovedTopUpReceipt(topUp.id, session?.user?.id);
+    const refreshedTopUp = await prisma.walletTopUp.findUnique({
+      where: { id },
+      include: {
+        user: { include: { wallet: true } },
+        reviewedBy: true
+      }
+    });
+
+    if (!refreshedTopUp) {
+      return NextResponse.json({ message: "Not found" }, { status: 404 });
+    }
+
+    Object.assign(topUp, refreshedTopUp);
   }
 
   if (topUp.status !== TopUpStatus.APPROVED || !topUp.receiptNumber || !topUp.receiptIssuedAt || !topUp.reviewedBy || !topUp.user.wallet) {

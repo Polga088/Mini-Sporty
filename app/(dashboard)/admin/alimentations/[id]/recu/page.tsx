@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
 import { buildTopUpWhatsappMessage, paymentMethodLabel } from "@/lib/topup-receipt";
+import { ensureApprovedTopUpReceipt } from "@/lib/topup-receipt-ensure";
 import { canAccessTopUpReceipt } from "@/lib/receipt-access";
 import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,24 @@ export default async function TopUpReceiptPage({
       redirect("/connexion");
     }
     notFound();
+  }
+
+  if (topUp.status === TopUpStatus.APPROVED && (!topUp.receiptNumber || !topUp.receiptIssuedAt)) {
+    await ensureApprovedTopUpReceipt(topUp.id, session?.user?.id);
+    const refreshedTopUp = await prisma.walletTopUp.findUnique({
+      where: { id },
+      include: {
+        user: { include: { wallet: true } },
+        reviewedBy: true,
+        receiptGeneratedBy: true
+      }
+    });
+
+    if (!refreshedTopUp) {
+      notFound();
+    }
+
+    Object.assign(topUp, refreshedTopUp);
   }
 
   if (topUp.status !== TopUpStatus.APPROVED || !topUp.receiptNumber || !topUp.receiptIssuedAt || !topUp.user.wallet || !topUp.reviewedBy) {
