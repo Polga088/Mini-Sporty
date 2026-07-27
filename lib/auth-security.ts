@@ -58,7 +58,7 @@ export function isSessionSnapshotValid(
     token.isActive === snapshot.isActive &&
     token.mustChangePassword === snapshot.mustChangePassword &&
     token.sessionVersion === snapshot.sessionVersion &&
-    token.passwordChangedAt === snapshot.passwordChangedAt?.toISOString()
+    token.passwordChangedAt === (snapshot.passwordChangedAt?.toISOString() ?? null)
   );
 }
 

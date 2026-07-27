@@ -35,7 +35,7 @@ export default function LoginPage() {
               return;
             }
 
-            window.location.href = "/espace";
+            window.location.href = "/";
           }}
         >
           <div>
