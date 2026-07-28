@@ -52,13 +52,14 @@ export function AppNav({ role }: { role?: Role | null }) {
           <Link
             key={link.href}
             href={link.href}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+              "flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 sm:px-4 sm:py-3",
               active ? "bg-emerald-600 text-white shadow-soft" : "text-slate-700 hover:bg-slate-100"
             )}
           >
-            <Icon className="h-4 w-4" />
-            {link.label}
+            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="min-w-0">{link.label}</span>
           </Link>
         );
       })}
