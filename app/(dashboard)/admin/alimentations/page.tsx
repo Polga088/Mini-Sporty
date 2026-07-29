@@ -7,13 +7,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
 import {
-  buildTopUpWhatsappMessage,
+  buildPremiumTopUpWhatsappMessage,
   paymentMethodLabel,
   topUpStatusLabel,
   topUpStatusVariant
 } from "@/lib/topup-receipt";
 import { ensureApprovedTopUpReceipt } from "@/lib/topup-receipt-ensure";
-import { getAppSettings } from "@/lib/settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -81,8 +80,6 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
   if (!canAccessSensitiveAdmin(session.user.role)) redirect("/espace");
 
   const { q, status, page, success, error } = await normalizeQuery(searchParams);
-  const settings = await getAppSettings();
-
   const approvedWithoutReceipt = await prisma.walletTopUp.findMany({
     where: {
       status: TopUpStatus.APPROVED,
@@ -159,9 +156,9 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <CardTitle>Gestion des alimentations</CardTitle>
+            <CardTitle>Alimentations wallet</CardTitle>
             <CardDescription className="max-w-2xl">
-              Recherchez une demande, filtrez par statut, puis validez, refusez ou consultez le reçu.
+              Validez les demandes, puis partagez un reçu clair et prêt à imprimer.
             </CardDescription>
           </div>
           <Button asChild variant="ghost">
@@ -203,15 +200,14 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
           visibleTopUps.map((topUp) => {
             const receiptUrl = `/admin/alimentations/${topUp.id}/recu`;
             const receiptPdfUrl = `${receiptUrl}/pdf`;
+            const receiptPngUrl = `${receiptUrl}/png`;
             const receiptReady = topUp.status === TopUpStatus.APPROVED && Boolean(topUp.receiptNumber);
             const receiptTransaction = transactionByTopUpId.get(topUp.id);
             const whatsappMessage = receiptReady && receiptTransaction && topUp.receiptNumber
-              ? buildTopUpWhatsappMessage({
-                  playerName: topUp.user.name,
+              ? buildPremiumTopUpWhatsappMessage({
                   amount: topUp.amount.toString(),
                   receiptNumber: topUp.receiptNumber,
-                  balanceAfter: receiptTransaction.balanceAfter.toString(),
-                  template: settings.whatsappTemplate
+                  balanceAfter: receiptTransaction.balanceAfter.toString()
                 })
               : null;
             const whatsappUrl = whatsappMessage ? `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}` : null;
@@ -242,8 +238,8 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
                     </p>
                   </div>
                   <div className="rounded-xl border p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Reçu</p>
-                    <p className="mt-1 text-sm font-medium">{receiptReady ? topUp.receiptNumber : "Aucun reçu"}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Votre reçu</p>
+                    <p className="mt-1 text-sm font-medium">{receiptReady ? topUp.receiptNumber : "Disponible après validation"}</p>
                   </div>
                   <div className="rounded-xl border p-3">
                     <p className="text-xs uppercase tracking-wide text-slate-500">Validé par</p>
@@ -287,14 +283,17 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
                       ) : receiptReady ? (
                         <>
                           <Button asChild>
-                            <Link href={receiptUrl}>Voir le reçu</Link>
+                            <Link href={receiptUrl}>Voir</Link>
                           </Button>
                           <Button asChild variant="secondary">
-                            <Link href={receiptPdfUrl}>Télécharger le reçu</Link>
+                            <Link href={receiptPngUrl}>PNG</Link>
+                          </Button>
+                          <Button asChild variant="secondary">
+                            <Link href={receiptPdfUrl}>PDF</Link>
                           </Button>
                           {whatsappUrl ? (
                             <Button asChild variant="ghost">
-                              <a href={whatsappUrl} target="_blank" rel="noreferrer">Partager sur WhatsApp</a>
+                              <a href={whatsappUrl} target="_blank" rel="noreferrer">WhatsApp</a>
                             </Button>
                           ) : null}
                         </>
@@ -308,7 +307,7 @@ export default async function AdminTopUpsPage({ searchParams }: { searchParams?:
                 {receiptReady ? (
                   <div className="flex flex-wrap gap-2">
                     <Button asChild variant="secondary">
-                      <Link href={receiptPdfUrl}>Télécharger le reçu</Link>
+                      <Link href={receiptPngUrl}>Télécharger le PNG</Link>
                     </Button>
                     <Button asChild variant="ghost">
                       <Link href={receiptUrl}>Voir le reçu</Link>

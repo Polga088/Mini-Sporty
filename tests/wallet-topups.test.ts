@@ -8,8 +8,10 @@ import {
   rejectTopUp,
   requestTopUp
 } from "../app/actions/wallet";
+import { buildReceiptVerificationPayload } from "../lib/topup-receipt";
 import { ensureApprovedTopUpReceipt } from "../lib/topup-receipt-ensure";
 import { GET as receiptPdfRoute } from "../app/(dashboard)/admin/alimentations/[id]/recu/pdf/route";
+import { GET as receiptPngRoute } from "../app/(dashboard)/admin/alimentations/[id]/recu/png/route";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -26,7 +28,8 @@ vi.mock("@/auth", () => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: mocks.revalidatePath
+  revalidatePath: mocks.revalidatePath,
+  unstable_noStore: vi.fn()
 }));
 
 vi.mock("next/navigation", () => ({
@@ -131,6 +134,18 @@ async function createTempPlayer(balance: number) {
 }
 
 describe("actions alimentations", () => {
+  it("génère un payload QR de reçu sans URL interne ni token", () => {
+    const payload = buildReceiptVerificationPayload({
+      receiptNumber: "FMW-20260729-120000-ABCDEF12",
+      verificationHash: "abc123"
+    });
+
+    expect(payload).toBe("MINI-SPORTY|RECEIPT|FMW-20260729-120000-ABCDEF12|abc123");
+    expect(payload).not.toContain("http");
+    expect(payload).not.toContain("/admin");
+    expect(payload).not.toContain("token");
+  });
+
   it("crée une demande d’alimentation", async () => {
     const player = await createTempPlayer(0);
     mocks.auth.mockResolvedValue(playerSession(player.id));
@@ -344,6 +359,13 @@ describe("actions alimentations", () => {
     expect(ready.status).toBe(200);
     expect(ready.headers.get("content-type")).toContain("application/pdf");
     expect(ready.headers.get("content-disposition")).toContain(`recu-${(await prisma.walletTopUp.findUnique({ where: { id: topUp.id } }))?.receiptNumber}.pdf`);
+
+    const png = await receiptPngRoute(new Request(`http://localhost:3000/admin/alimentations/${topUp.id}/recu/png`), {
+      params: Promise.resolve({ id: topUp.id })
+    });
+    expect(png.status).toBe(200);
+    expect(png.headers.get("content-type")).toContain("image/png");
+    expect(png.headers.get("content-disposition")).toContain(".png");
   });
 
   it("rattrape un reçu manquant pour une alimentation déjà validée sans recréditer le wallet", async () => {
@@ -463,5 +485,11 @@ describe("actions alimentations", () => {
     });
 
     expect(response.status).toBe(404);
+
+    const pngResponse = await receiptPngRoute(new Request(`http://localhost:3000/admin/alimentations/${topUp.id}/recu/png`), {
+      params: Promise.resolve({ id: topUp.id })
+    });
+
+    expect(pngResponse.status).toBe(404);
   });
 });

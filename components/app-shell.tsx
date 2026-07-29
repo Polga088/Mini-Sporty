@@ -31,7 +31,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.10),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(15,23,42,0.08),_transparent_30%),linear-gradient(180deg,#f8fafc_0%,#ffffff_70%)]">
+    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.10),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(15,23,42,0.08),_transparent_30%),linear-gradient(180deg,#f8fafc_0%,#ffffff_70%)]">
       <header className="border-b border-white/50 bg-white/70 backdrop-blur">
         <PageContainer className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
@@ -69,8 +69,8 @@ export function AppShell({
         </PageContainer>
       </header>
       <main>
-        <PageContainer className="grid gap-5 lg:grid-cols-[minmax(240px,280px)_1fr] lg:gap-6">
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <PageContainer className="grid min-w-0 gap-5 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:gap-6">
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
             <nav className="rounded-2xl border border-white/70 bg-white/75 p-2 shadow-soft backdrop-blur sm:p-3">
               <AppNav role={role} />
             </nav>
@@ -84,7 +84,7 @@ export function AppShell({
               <p className="mt-2 text-sm">Notification dès que le portefeuille passe sous {formatDh(walletAlertThreshold)}.</p>
             </div>
           </aside>
-          <section className="space-y-6">{children}</section>
+          <section className="min-w-0 space-y-6">{children}</section>
         </PageContainer>
       </main>
     </div>

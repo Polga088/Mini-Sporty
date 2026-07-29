@@ -2,25 +2,41 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { BadgeEuro, Bell, ClipboardList, Settings, Users, Volleyball } from "lucide-react";
-import { MatchParticipantStatus, MatchStatus, PollResponseChoice, PollStatus, Role, TopUpStatus } from "@prisma/client";
+import {
+  BadgeEuro,
+  Bell,
+  CalendarCheck,
+  ClipboardList,
+  CircleAlert,
+  Plus,
+  Settings,
+  ShieldCheck,
+  TrendingDown,
+  Users,
+  Volleyball,
+  WalletCards
+} from "lucide-react";
+import {
+  ContributionStatus,
+  ExpenseCategory,
+  MatchParticipantStatus,
+  MatchStatus,
+  PollResponseChoice,
+  PollStatus,
+  Role,
+  TopUpStatus
+} from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDh } from "@/lib/money";
 import { getAppSettings } from "@/lib/settings";
 import { canManageSport } from "@/lib/permissions";
-import { ActivityFeed } from "@/components/activity-feed";
 import { AdminMatchHero, type AdminMatchHeroData } from "@/components/admin-match-hero";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/page-header";
 import { PriorityPanel, type PriorityItem } from "@/components/priority-panel";
-import { ProgressCard } from "@/components/progress-card";
-import { QuickAction } from "@/components/quick-action";
-import { SectionHeader } from "@/components/section-header";
-import { StatCard } from "@/components/stat-card";
+import { ActivityTimeline, type ActivityTimelineItem, FinanceCard, MetricCard, PremiumPageHeader, QuickActionCard, SportMetricCard } from "@/components/premium-dashboard";
 
-type FeedTone = "default" | "success" | "warning" | "danger" | "info";
+type FeedTone = "emerald" | "amber" | "rose" | "sky" | "slate";
 
 function firstName(name?: string | null) {
   return name?.trim().split(/\s+/)[0] || "";
@@ -34,9 +50,9 @@ function topUpStatusLabel(status: TopUpStatus) {
 }
 
 function topUpTone(status: TopUpStatus): FeedTone {
-  if (status === TopUpStatus.APPROVED) return "success";
-  if (status === TopUpStatus.REJECTED || status === TopUpStatus.CANCELLED) return "danger";
-  return "warning";
+  if (status === TopUpStatus.APPROVED) return "emerald";
+  if (status === TopUpStatus.REJECTED || status === TopUpStatus.CANCELLED) return "rose";
+  return "amber";
 }
 
 function matchStatusLabel(status: MatchStatus) {
@@ -57,10 +73,10 @@ function matchStatusLabel(status: MatchStatus) {
 }
 
 function matchTone(status: MatchStatus): FeedTone {
-  if (status === MatchStatus.CANCELLED) return "danger";
-  if (status === MatchStatus.OPEN || status === MatchStatus.CONFIRMED) return "success";
-  if (status === MatchStatus.FULL) return "warning";
-  return "info";
+  if (status === MatchStatus.CANCELLED) return "rose";
+  if (status === MatchStatus.OPEN || status === MatchStatus.CONFIRMED) return "emerald";
+  if (status === MatchStatus.FULL) return "amber";
+  return "sky";
 }
 
 function matchStatusTone(status: MatchStatus): AdminMatchHeroData["statusTone"] {
@@ -86,10 +102,28 @@ function pollStatusLabel(status: PollStatus) {
 }
 
 function pollTone(status: PollStatus): FeedTone {
-  if (status === PollStatus.OPEN) return "success";
-  if (status === PollStatus.PAUSED) return "warning";
-  if (status === PollStatus.CANCELLED) return "danger";
-  return "default";
+  if (status === PollStatus.OPEN) return "emerald";
+  if (status === PollStatus.PAUSED) return "amber";
+  if (status === PollStatus.CANCELLED) return "rose";
+  return "slate";
+}
+
+function contributionStatusLabel(status: ContributionStatus) {
+  if (status === ContributionStatus.ACTIVE) return "active";
+  if (status === ContributionStatus.COMPLETED) return "terminée";
+  if (status === ContributionStatus.CANCELLED) return "annulée";
+  return "brouillon";
+}
+
+function contributionTone(status: ContributionStatus): FeedTone {
+  if (status === ContributionStatus.ACTIVE) return "emerald";
+  if (status === ContributionStatus.CANCELLED) return "rose";
+  if (status === ContributionStatus.COMPLETED) return "slate";
+  return "sky";
+}
+
+function expenseCategoryLabel(category: ExpenseCategory) {
+  return category.toLowerCase().replaceAll("_", " ");
 }
 
 function formatDateTime(date: Date) {
@@ -108,48 +142,76 @@ export default async function AdminHomePage() {
   const settings = await getAppSettings();
   const now = new Date();
 
-  const [players, wallets, matches, contributions, topUps, pollResponses, nextMatch, recentTopUps, recentMatches, recentPolls] =
-    await Promise.all([
-      prisma.user.count({ where: { role: Role.PLAYER, isActive: true } }),
-      prisma.wallet.findMany({ include: { user: { select: { role: true, isActive: true, name: true } } } }),
-      prisma.match.count(),
-      prisma.contribution.count(),
-      prisma.walletTopUp.count({ where: { status: TopUpStatus.PENDING } }),
-      prisma.pollResponse.findMany({
-        select: { response: true, isWaitlisted: true }
-      }),
-      prisma.match.findFirst({
-        where: {
-          status: { not: MatchStatus.CANCELLED },
-          matchDate: { gte: now }
-        },
-        orderBy: { matchDate: "asc" },
-        include: {
-          participants: {
-            select: { status: true }
-          }
+  const [
+    players,
+    wallets,
+    matches,
+    contributions,
+    pendingTopUps,
+    openPolls,
+    draftMatches,
+    pollResponses,
+    nextMatch,
+    recentTopUps,
+    recentMatches,
+    recentPolls,
+    recentContributions,
+    recentExpenses
+  ] = await Promise.all([
+    prisma.user.count({ where: { role: Role.PLAYER, isActive: true } }),
+    prisma.wallet.findMany({ include: { user: { select: { role: true, isActive: true, name: true } } } }),
+    prisma.match.count(),
+    prisma.contribution.count(),
+    prisma.walletTopUp.count({ where: { status: TopUpStatus.PENDING } }),
+    prisma.poll.count({ where: { status: PollStatus.OPEN } }),
+    prisma.match.count({ where: { status: MatchStatus.DRAFT, matchDate: { gte: now } } }),
+    prisma.pollResponse.findMany({
+      select: { response: true, isWaitlisted: true }
+    }),
+    prisma.match.findFirst({
+      where: {
+        status: { not: MatchStatus.CANCELLED },
+        matchDate: { gte: now }
+      },
+      orderBy: { matchDate: "asc" },
+      include: {
+        participants: {
+          select: { status: true }
         }
-      }),
-      prisma.walletTopUp.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 4,
-        include: { user: { select: { name: true } } }
-      }),
-      prisma.match.findMany({
-        orderBy: { matchDate: "desc" },
-        take: 3
-      }),
-      prisma.poll.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 3
-      })
-    ]);
+      }
+    }),
+    prisma.walletTopUp.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      include: { user: { select: { name: true } } }
+    }),
+    prisma.match.findMany({
+      orderBy: { matchDate: "desc" },
+      take: 3
+    }),
+    prisma.poll.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 3
+    }),
+    prisma.contribution.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      select: { id: true, title: true, amountPerPlayer: true, status: true, createdAt: true }
+    }),
+    prisma.expense.findMany({
+      orderBy: { expenseDate: "desc" },
+      take: 3,
+      select: { id: true, title: true, amount: true, category: true, expenseDate: true }
+    })
+  ]);
 
   const totalBalance = wallets.reduce((sum, wallet) => sum + Number(wallet.balance), 0);
-  const alertsCount = wallets.filter((wallet) => wallet.user.role === Role.PLAYER && wallet.user.isActive && Number(wallet.balance) < settings.walletAlertThreshold.toNumber()).length;
+  const walletAlertThreshold = settings.walletAlertThreshold.toNumber();
+  const alertsCount = wallets.filter((wallet) => wallet.user.role === Role.PLAYER && wallet.user.isActive && Number(wallet.balance) < walletAlertThreshold).length;
   const responseBase = pollResponses.length || 1;
   const presentCount = pollResponses.filter((response) => response.response === PollResponseChoice.PRESENT && !response.isWaitlisted).length;
   const absentCount = pollResponses.filter((response) => response.response === PollResponseChoice.ABSENT).length;
+  const maybeCount = pollResponses.filter((response) => response.response === PollResponseChoice.MAYBE).length;
   const waitlistCount = pollResponses.filter((response) => response.isWaitlisted).length;
   const globalFillRate = Math.round((presentCount / responseBase) * 100);
 
@@ -170,14 +232,14 @@ export default async function AdminHomePage() {
     : null;
 
   const priorityItems: PriorityItem[] = [
-    ...(topUps > 0
+    ...(pendingTopUps > 0
       ? [
           {
             href: "/admin/alimentations?status=PENDING",
-            label: `${topUps} alimentation${topUps > 1 ? "s" : ""} à valider`,
-            description: "Demandes joueur en attente de validation administrative.",
-            count: topUps,
-            badgeLabel: "À valider",
+            label: "Valider les paiements",
+            description: `${pendingTopUps} demande${pendingTopUps > 1 ? "s" : ""} en attente côté portefeuille.`,
+            count: pendingTopUps,
+            badgeLabel: "Finance",
             tone: "warning" as const,
             icon: <BadgeEuro className="h-4 w-4" />
           }
@@ -187,113 +249,183 @@ export default async function AdminHomePage() {
       ? [
           {
             href: "/admin/joueurs?status=active",
-            label: `${alertsCount} joueur${alertsCount > 1 ? "s" : ""} avec un solde faible`,
-            description: `Portefeuilles actifs sous le seuil de ${formatDh(settings.walletAlertThreshold)}.`,
+            label: "Relancer les soldes",
+            description: `${alertsCount} joueur${alertsCount > 1 ? "s" : ""} sous le seuil de ${formatDh(settings.walletAlertThreshold)}.`,
             count: alertsCount,
-            badgeLabel: "Solde faible",
+            badgeLabel: "Alerte",
             tone: "error" as const,
             icon: <Bell className="h-4 w-4" />
+          }
+        ]
+      : []),
+    ...(openPolls > 0
+      ? [
+          {
+            href: "/admin/sondages?status=OPEN",
+            label: "Suivre les sondages",
+            description: `${openPolls} sondage${openPolls > 1 ? "s" : ""} ouvert${openPolls > 1 ? "s" : ""} à surveiller.`,
+            count: openPolls,
+            badgeLabel: "Sport",
+            tone: "info" as const,
+            icon: <ClipboardList className="h-4 w-4" />
+          }
+        ]
+      : []),
+    ...(draftMatches > 0
+      ? [
+          {
+            href: "/admin/matchs?status=DRAFT",
+            label: "Cadrer les matchs",
+            description: `${draftMatches} match${draftMatches > 1 ? "s" : ""} brouillon${draftMatches > 1 ? "s" : ""} à finaliser.`,
+            count: draftMatches,
+            badgeLabel: "Prépa",
+            tone: "neutral" as const,
+            icon: <CircleAlert className="h-4 w-4" />
           }
         ]
       : [])
   ];
 
-  const activityItems = [
+  const activityItems: ActivityTimelineItem[] = [
     ...recentTopUps.map((topUp) => ({
+      id: `topup-${topUp.id}`,
       date: topUp.createdAt,
-      title: `Alimentation · ${topUp.user.name}`,
-      description: `${formatDh(topUp.amount)} · ${topUpStatusLabel(topUp.status)} · ${formatDateTime(topUp.createdAt)}`,
+      href: "/admin/alimentations",
+      type: "topup" as const,
+      title: topUp.user.name,
+      description: `${formatDh(topUp.amount)} · ${formatDateTime(topUp.createdAt)}`,
       meta: topUpStatusLabel(topUp.status),
       tone: topUpTone(topUp.status)
     })),
     ...recentMatches.map((match) => ({
+      id: `match-${match.id}`,
       date: match.matchDate,
-      title: `Match · ${match.title}`,
+      href: `/admin/matchs/${match.id}`,
+      type: "match" as const,
+      title: match.title,
       description: `${match.location} · ${formatDh(match.participationFee)} · ${formatDateTime(match.matchDate)}`,
       meta: matchStatusLabel(match.status),
       tone: matchTone(match.status)
     })),
     ...recentPolls.map((poll) => ({
+      id: `poll-${poll.id}`,
       date: poll.createdAt,
-      title: `Sondage · ${poll.title}`,
-      description: `${poll.capacity} places · ${pollStatusLabel(poll.status)} · ${formatDateTime(poll.createdAt)}`,
+      href: `/admin/sondages/${poll.id}`,
+      type: "poll" as const,
+      title: poll.title,
+      description: `${poll.capacity} places · ${formatDateTime(poll.createdAt)}`,
       meta: pollStatusLabel(poll.status),
       tone: pollTone(poll.status)
+    })),
+    ...recentContributions.map((contribution) => ({
+      id: `contribution-${contribution.id}`,
+      date: contribution.createdAt,
+      href: "/admin/cotisations",
+      type: "contribution" as const,
+      title: contribution.title,
+      description: `${formatDh(contribution.amountPerPlayer)} par joueur · ${formatDateTime(contribution.createdAt)}`,
+      meta: contributionStatusLabel(contribution.status),
+      tone: contributionTone(contribution.status)
+    })),
+    ...recentExpenses.map((expense) => ({
+      id: `expense-${expense.id}`,
+      date: expense.expenseDate,
+      href: "/admin/depenses",
+      type: "expense" as const,
+      title: expense.title,
+      description: `${formatDh(expense.amount)} · ${expenseCategoryLabel(expense.category)} · ${formatDateTime(expense.expenseDate)}`,
+      meta: "dépense",
+      tone: "rose" as const
     }))
-  ]
+  ];
+
+  const sortedActivityItems = activityItems
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 8);
 
   const adminName = firstName(session.user.name);
+  const approvedAmount = recentTopUps.filter((topUp) => topUp.status === TopUpStatus.APPROVED).reduce((sum, topUp) => sum + Number(topUp.amount), 0);
+  const expenseAmount = recentExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Dashboard admin"
+    <div className="space-y-7">
+      <PremiumPageHeader
+        eyebrow="QG du vendredi"
         title={adminName ? `Bonjour ${adminName}` : "Bonjour"}
-        description="Le prochain match et les priorités de l’équipe en un coup d’œil."
-        primaryAction={
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/admin/sondages/nouveau">Nouveau sondage</Link>
+        description="Le prochain match, les priorités et l’état du collectif au même endroit."
+        action={
+          <Button asChild className="w-full bg-emerald-500 text-white hover:bg-emerald-600 sm:w-auto">
+            <Link href="/admin/sondages/nouveau">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Nouveau sondage
+            </Link>
           </Button>
         }
       />
 
       <section aria-labelledby="next-match-title">
         <h2 id="next-match-title" className="sr-only">
-          Prochain rendez-vous
+          Prochain match
         </h2>
         <AdminMatchHero match={heroMatch} />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
         <PriorityPanel items={priorityItems} />
 
-        <Card>
-          <SectionHeader title="Collectif" description="Vue globale de l’activité sportive, sans rattacher les réponses au prochain match." />
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <StatCard label="Joueurs actifs" value={players} hint="Comptes joueurs connectables" icon={<Users className="h-5 w-5" />} tone="success" />
-            <StatCard label="Matchs enregistrés" value={matches} hint="Total des matchs créés" icon={<Volleyball className="h-5 w-5" />} tone="info" />
-            <StatCard label="Cotisations" value={contributions} hint="Campagnes actives ou passées" icon={<ClipboardList className="h-5 w-5" />} />
-            <ProgressCard
-              label="Réponses de sondage globales"
-              value={`${globalFillRate}%`}
-              percent={globalFillRate}
-              help={`Total global: ${presentCount} présents · ${waitlistCount} attente · ${absentCount} absents`}
-            />
-          </div>
-        </Card>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MetricCard label="Joueurs actifs" value={players} hint="Comptes joueurs actuellement connectables." icon={<Users className="h-5 w-5" />} tone="emerald" />
+          <MetricCard label="Matchs créés" value={matches} hint="Historique complet des rendez-vous." icon={<Volleyball className="h-5 w-5" />} tone="sky" />
+          <MetricCard label="Cotisations" value={contributions} hint="Campagnes enregistrées dans Mini Sporty." icon={<ShieldCheck className="h-5 w-5" />} tone="slate" />
+          <MetricCard label="Sondages ouverts" value={openPolls} hint="Votes encore actifs pour les joueurs." icon={<ClipboardList className="h-5 w-5" />} tone={openPolls > 0 ? "amber" : "emerald"} />
+        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.42fr)]">
-        <div className="space-y-6">
-          <Card>
-            <SectionHeader title="Finance" description="Indicateurs agrégés des portefeuilles Mini Sporty." />
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <StatCard label="Portefeuille global" value={<span className="text-2xl tabular-nums sm:text-3xl">{formatDh(totalBalance)}</span>} hint="Somme agrégée des wallets" icon={<BadgeEuro className="h-5 w-5" />} />
-              <StatCard label="Alimentations en attente" value={topUps} hint="À valider par l’admin" tone="warning" />
-              <StatCard label="Soldes faibles" value={alertsCount} hint={`Sous ${formatDh(settings.walletAlertThreshold)}`} tone={alertsCount > 0 ? "danger" : "success"} />
-            </div>
-          </Card>
+      <FinanceCard
+        balance={<span className="whitespace-nowrap tabular-nums">{formatDh(totalBalance)}</span>}
+        pendingTopUps={pendingTopUps}
+        lowBalancePlayers={alertsCount}
+        recentInflows={<span className="whitespace-nowrap tabular-nums">{formatDh(approvedAmount)}</span>}
+        recentOutflows={<span className="whitespace-nowrap tabular-nums">{formatDh(expenseAmount)}</span>}
+        alertThreshold={<span className="whitespace-nowrap">{formatDh(settings.walletAlertThreshold)}</span>}
+      />
 
-          <ActivityFeed
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.42fr)]">
+        <div className="space-y-6">
+          <div className="grid gap-3 md:grid-cols-3">
+            <SportMetricCard title="Présents" value={presentCount} description={`${globalFillRate}% des réponses globales sont confirmées présentes.`} progress={globalFillRate} tone="emerald" icon={<CalendarCheck className="h-4 w-4" />} />
+            <SportMetricCard title="En attente" value={waitlistCount} description="Joueurs placés en liste d’attente sur les sondages." tone={waitlistCount > 0 ? "amber" : "slate"} icon={<Users className="h-4 w-4" />} />
+            <SportMetricCard title="Absents ou incertains" value={absentCount + maybeCount} description={`${absentCount} absents · ${maybeCount} peut-être.`} tone="sky" icon={<CircleAlert className="h-4 w-4" />} />
+          </div>
+
+          <ActivityTimeline
             title="Activité récente"
-            description="Flux unifié trié par date: alimentations, matchs et sondages."
-            items={activityItems}
-            emptyLabel="Aucune activité récente à afficher."
+            description="Matchs, sondages, alimentations, cotisations et dépenses triés par date."
+            items={sortedActivityItems}
+            emptyLabel="Aucune activité récente pour le moment."
           />
         </div>
 
-        <Card>
-          <SectionHeader title="Raccourcis" description="Accès secondaires pour piloter l’organisation." />
-          <div className="mt-4 grid gap-3">
-            <QuickAction href="/admin/sondages" label="Sondages" description="Ouvrir, suspendre ou clôturer" icon={<ClipboardList className="h-4 w-4" />} />
-            <QuickAction href="/admin/matchs" label="Matchs" description="Créer et gérer les rendez-vous" icon={<Volleyball className="h-4 w-4" />} tone="soft" />
-            <QuickAction href="/admin/joueurs" label="Joueurs" description="Comptes, statuts et mots de passe" icon={<Users className="h-4 w-4" />} />
-            <QuickAction href="/admin/parametres" label="Paramètres" description="Logo, seuils et WhatsApp" icon={<Settings className="h-4 w-4" />} tone="soft" />
+        <aside className="space-y-3" aria-labelledby="quick-actions-title">
+          <div className="rounded-[2rem] border border-white/75 bg-white/72 p-5 shadow-sm backdrop-blur">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Raccourcis</p>
+            <h2 id="quick-actions-title" className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">
+              Piloter sans chercher
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Les accès que l’admin utilise le plus souvent.</p>
           </div>
-        </Card>
+          <QuickActionCard href="/admin/sondages" label="Sondages" description="Ouvrir, suspendre, clôturer." icon={<ClipboardList className="h-4 w-4" />} tone="emerald" />
+          <QuickActionCard href="/admin/matchs" label="Matchs" description="Créer et gérer les rendez-vous." icon={<Volleyball className="h-4 w-4" />} tone="sky" />
+          <QuickActionCard href="/admin/joueurs" label="Joueurs" description="Comptes, statuts, accès." icon={<Users className="h-4 w-4" />} tone="slate" />
+          <QuickActionCard href="/admin/alimentations" label="Portefeuilles" description="Alimentations et reçus." icon={<WalletCards className="h-4 w-4" />} tone="amber" />
+          <QuickActionCard href="/admin/depenses" label="Dépenses" description="Suivi des sorties." icon={<TrendingDown className="h-4 w-4" />} tone="rose" />
+          <QuickActionCard href="/admin/parametres" label="Paramètres" description="Logo, seuils, WhatsApp." icon={<Settings className="h-4 w-4" />} tone="slate" />
+        </aside>
       </section>
+
+      <div className="sr-only" aria-live="polite">
+        Chargement terminé.
+      </div>
     </div>
   );
 }

@@ -94,3 +94,33 @@ export function buildTopUpWhatsappMessage(params: {
     .replaceAll("{receiptNumber}", params.receiptNumber)
     .replaceAll("{balance}", formatDh(params.balanceAfter));
 }
+
+export function buildPremiumTopUpWhatsappMessage(params: {
+  amount: string | number;
+  receiptNumber: string;
+  balanceAfter: string | number;
+}) {
+  return [
+    "Mini Sporty",
+    "",
+    "Votre alimentation a été validée.",
+    "",
+    "Montant :",
+    formatDh(params.amount),
+    "",
+    "Nouveau solde :",
+    formatDh(params.balanceAfter),
+    "",
+    "Reçu :",
+    `#${params.receiptNumber}`,
+    "",
+    "Merci."
+  ].join("\n");
+}
+
+export function buildReceiptVerificationPayload(params: {
+  receiptNumber: string;
+  verificationHash: string;
+}) {
+  return `MINI-SPORTY|RECEIPT|${params.receiptNumber}|${params.verificationHash}`;
+}
