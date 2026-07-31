@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { NoticeBanner } from "@/components/notice-banner";
 import { PlayerActionsMenu } from "@/components/player-actions-menu";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { PlayerRecruitCard } from "@/components/player-recruit-card";
 import { createPlayer, deletePlayer, disablePlayer, enablePlayer, resetPlayerPassword } from "@/app/actions/players";
 import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { redirect } from "next/navigation";
@@ -150,14 +151,14 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
           </div>
         </div>
 
-        <form method="get" className="mt-4 grid gap-4 md:grid-cols-4">
+        <form method="get" className="mt-4 grid min-w-0 gap-4 md:grid-cols-4">
           <div className="md:col-span-2">
             <Label htmlFor="q">Recherche</Label>
-            <Input id="q" name="q" defaultValue={q} placeholder="Nom, email ou téléphone" />
+            <Input id="q" name="q" defaultValue={q} placeholder="Nom, email ou téléphone" autoComplete="off" />
           </div>
           <div>
             <Label htmlFor="status">Statut</Label>
-            <select id="status" name="status" defaultValue={status} className="w-full rounded-xl border bg-white px-3 py-2 text-sm">
+            <select id="status" name="status" defaultValue={status} className="w-full min-w-0 rounded-xl border bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
               <option value="all">Tous</option>
               <option value="active">Actifs</option>
               <option value="inactive">Inactifs</option>
@@ -165,7 +166,7 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
           </div>
           <div>
             <Label htmlFor="sort">Tri</Label>
-            <select id="sort" name="sort" defaultValue={sort} className="w-full rounded-xl border bg-white px-3 py-2 text-sm">
+            <select id="sort" name="sort" defaultValue={sort} className="w-full min-w-0 rounded-xl border bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
               <option value="name_asc">Nom A-Z</option>
               <option value="name_desc">Nom Z-A</option>
               <option value="balance_desc">Solde décroissant</option>
@@ -175,9 +176,9 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
               <option value="created_asc">Création ancienne</option>
             </select>
           </div>
-          <div className="md:col-span-4 flex flex-wrap gap-3">
-            <FormSubmitButton>Appliquer</FormSubmitButton>
-            <Button variant="outline" type="button" asChild className="gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row md:col-span-4">
+            <FormSubmitButton className="w-full sm:w-auto">Appliquer</FormSubmitButton>
+            <Button variant="outline" type="button" asChild className="w-full gap-2 sm:w-auto">
               <Link href="/admin/joueurs">
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
                 Réinitialiser
@@ -187,42 +188,70 @@ export default async function PlayersAdminPage({ searchParams }: { searchParams?
         </form>
       </Card>
 
-      <Card>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <CardTitle>Nouveau joueur</CardTitle>
-            <CardDescription className="max-w-3xl">
-              Créez un compte joueur avec wallet automatique et solde initial optionnel. Les boutons de soumission affichent un état de chargement.
-            </CardDescription>
-          </div>
-        </div>
+      <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+        <PlayerRecruitCard />
 
-        <form action={createPlayer} className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
-            <Label htmlFor="name">Nom</Label>
-            <Input id="name" name="name" required />
+        <Card className="min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Étape 1 sur 1</p>
+              <CardTitle className="mt-2 text-2xl tracking-[-0.04em] sm:text-3xl">Nouveau joueur</CardTitle>
+              <CardDescription className="max-w-xl text-base leading-6">
+                Prêt à rejoindre l’équipe ?
+              </CardDescription>
+            </div>
+            <Badge variant="success">PLAYER</Badge>
           </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required />
-          </div>
-          <div>
-            <Label htmlFor="phone">Téléphone</Label>
-            <Input id="phone" name="phone" placeholder="Facultatif" />
-          </div>
-          <div>
-            <Label htmlFor="temporaryPassword">Mot de passe temporaire</Label>
-            <Input id="temporaryPassword" name="temporaryPassword" type="password" minLength={6} required />
-          </div>
-          <div>
-            <Label htmlFor="initialBalance">Solde initial</Label>
-            <Input id="initialBalance" name="initialBalance" type="number" min="0" step="0.01" placeholder="0.00" />
-          </div>
-          <div className="flex items-end">
-            <FormSubmitButton>Créer le joueur</FormSubmitButton>
-          </div>
-        </form>
-      </Card>
+
+          <form action={createPlayer} className="mt-6 space-y-6" aria-describedby="new-player-help">
+            <p id="new-player-help" className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-950">
+              Renseignez l’identité, un accès temporaire et un solde de départ si besoin. Le wallet est créé automatiquement.
+            </p>
+
+            <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
+              <legend className="sr-only">Identité du joueur</legend>
+              <div className="md:col-span-2">
+                <Label htmlFor="name">Nom complet</Label>
+                <Input id="name" name="name" required autoComplete="name" placeholder="Ex: Yassine Benali" />
+                <p className="mt-1 text-xs leading-5 text-slate-500">Utilisez le nom affiché dans l’équipe.</p>
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" type="email" required autoComplete="email" placeholder="joueur@exemple.ma" />
+                <p className="mt-1 text-xs leading-5 text-slate-500">Adresse unique pour la connexion.</p>
+              </div>
+              <div>
+                <Label htmlFor="phone">Téléphone</Label>
+                <Input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="Facultatif" />
+                <p className="mt-1 text-xs leading-5 text-slate-500">Utile pour les rappels WhatsApp.</p>
+              </div>
+            </fieldset>
+
+            <fieldset className="grid min-w-0 gap-4 md:grid-cols-2">
+              <legend className="sr-only">Accès et wallet</legend>
+              <div>
+                <Label htmlFor="temporaryPassword">Mot de passe temporaire</Label>
+                <Input id="temporaryPassword" name="temporaryPassword" type="password" minLength={6} required autoComplete="new-password" placeholder="Minimum 6 caractères" />
+                <p className="mt-1 text-xs leading-5 text-slate-500">Le joueur devra le changer à sa prochaine connexion.</p>
+              </div>
+              <div>
+                <Label htmlFor="initialBalance">Solde initial</Label>
+                <Input id="initialBalance" name="initialBalance" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" />
+                <p className="mt-1 text-xs leading-5 text-slate-500">Optionnel. Montant en DH, positif ou nul.</p>
+              </div>
+            </fieldset>
+
+            <div className="sticky bottom-0 -mx-5 border-t border-slate-200 bg-white/92 px-5 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+              <FormSubmitButton className="w-full sm:w-auto" pendingLabel="Ajout en cours...">
+                Ajouter le joueur
+              </FormSubmitButton>
+              <p className="mt-3 text-center text-xs text-slate-500 sm:text-left" aria-live="polite">
+                Confirmation : le joueur rejoint l’équipe.
+              </p>
+            </div>
+          </form>
+        </Card>
+      </section>
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-4">

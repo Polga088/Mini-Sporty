@@ -26,6 +26,7 @@
 
 html {
   color-scheme: light;
+  overflow-x: hidden;
 }
 
 body {
@@ -35,6 +36,10 @@ body {
     hsl(var(--background));
   color: hsl(var(--foreground));
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 a {
@@ -42,8 +47,68 @@ a {
   text-decoration: none;
 }
 
+input:not([type="hidden"]),
+select,
+textarea {
+  min-height: 44px;
+  font-size: 16px !important;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
 .glass {
   backdrop-filter: blur(16px);
   background: rgba(255, 255, 255, 0.72);
 }
 
+@keyframes sporty-ball-roll {
+  0% {
+    transform: translate3d(-0.75rem, 0, 0) rotate(0deg);
+  }
+  70% {
+    transform: translate3d(8.5rem, 0, 0) rotate(380deg);
+  }
+  100% {
+    transform: translate3d(8.5rem, -0.35rem, 0) rotate(420deg);
+  }
+}
+
+@keyframes sporty-goal-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scaleX(0.92);
+  }
+  70% {
+    opacity: 0.9;
+    transform: scaleX(1);
+  }
+}
+
+.football-ball {
+  animation: sporty-ball-roll 4.8s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+.football-goal-line {
+  animation: sporty-goal-pulse 4.8s ease-in-out infinite;
+  transform-origin: right center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .football-ball,
+  .football-goal-line {
+    animation: none !important;
+    transform: none !important;
+  }
+}

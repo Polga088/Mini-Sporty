@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { canAccessSensitiveAdmin } from "@/lib/permissions";
 import { createContribution, debitContribution } from "@/app/actions/contributions";
 import { redirect } from "next/navigation";
@@ -17,10 +18,10 @@ export default async function AdminContributionsPage() {
       <Card>
         <CardTitle>Créer une cotisation</CardTitle>
         <form action={createContribution} className="mt-4 flex flex-col gap-3">
-          <input name="title" placeholder="Titre" className="rounded-xl border px-3 py-2" />
-          <input name="description" placeholder="Description" className="rounded-xl border px-3 py-2" />
-          <input name="amountPerPlayer" type="number" step="0.01" placeholder="Montant" className="rounded-xl border px-3 py-2" />
-          <button className="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white">Créer</button>
+          <input name="title" placeholder="Titre" className="w-full min-w-0 rounded-xl border px-3 py-2" />
+          <input name="description" placeholder="Description" className="w-full min-w-0 rounded-xl border px-3 py-2" />
+          <input name="amountPerPlayer" type="number" step="0.01" inputMode="decimal" placeholder="Montant" className="w-full min-w-0 rounded-xl border px-3 py-2" />
+          <Button type="submit" className="w-full sm:w-auto">Créer</Button>
         </form>
       </Card>
 
@@ -30,11 +31,14 @@ export default async function AdminContributionsPage() {
           {contributions.map((contribution: (typeof contributions)[number]) => (
             <div key={contribution.id} className="rounded-xl border p-4">
               <p className="font-medium">{contribution.title}</p>
-              <form action={async () => {
-                "use server";
-                await debitContribution(contribution.id);
-              }} className="mt-3">
-                <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white">Débiter tout le monde</button>
+              <form
+                action={async () => {
+                  "use server";
+                  await debitContribution(contribution.id);
+                }}
+                className="mt-3"
+              >
+                <Button type="submit" variant="secondary" className="w-full sm:w-auto">Débiter tout le monde</Button>
               </form>
             </div>
           ))}

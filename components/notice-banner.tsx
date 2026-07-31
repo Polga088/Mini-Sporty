@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 const messages: Record<string, { title: string; description: string; variant: "success" | "danger" | "warning" | "info" }> = {
   created: {
     title: "Joueur créé",
-    description: "Le joueur a été créé avec son wallet.",
+    description: "Le joueur rejoint l’équipe avec son wallet.",
     variant: "success"
   },
   updated: {
@@ -346,7 +346,7 @@ export function NoticeBanner({
           : "border-red-200 bg-red-50 text-red-950";
 
   return (
-    <div className={`rounded-2xl border p-4 shadow-soft ${variantClass}`} role={error ? "alert" : "status"}>
+    <div className={`rounded-2xl border p-4 shadow-soft ${variantClass}`} role={error ? "alert" : "status"} aria-live={error ? "assertive" : "polite"}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-semibold">{notice.title}</p>
