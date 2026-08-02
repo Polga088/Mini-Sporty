@@ -90,6 +90,8 @@ enum ExpenseCategory {
 }
 
 enum NotificationType {
+  PLAYER_REGISTRATION_SUBMITTED
+  PLAYER_REGISTRATION_APPROVED
   POLL_OPENED
   POLL_CLOSING_SOON
   POLL_NEAR_FULL
@@ -109,6 +111,12 @@ enum NotificationType {
 
 enum SecurityAuditType {
   PASSWORD_RESET
+}
+
+enum AccountApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum PollStatus {
@@ -141,6 +149,13 @@ model User {
   role                     Role                      @default(PLAYER)
   phone                    String?
   isActive                 Boolean                   @default(true)
+  approvalStatus           AccountApprovalStatus     @default(APPROVED)
+  requestedAt              DateTime?
+  approvedAt               DateTime?
+  approvedById             String?
+  rejectedAt               DateTime?
+  rejectedById             String?
+  rejectionReason          String?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   wallet                   Wallet?
@@ -159,8 +174,16 @@ model User {
   pollManagedResponses     PollResponse[]            @relation("PollManagedBy")
   presenceLogs             MatchPresenceLog[]        @relation("MatchPresenceUser")
   presenceActions          MatchPresenceLog[]        @relation("MatchPresenceActor")
-  securityAuditActions     SecurityAudit[]            @relation("SecurityAuditActor")
-  securityAuditTargets     SecurityAudit[]            @relation("SecurityAuditTarget")
+  securityAuditActions     SecurityAudit[]           @relation("SecurityAuditActor")
+  securityAuditTargets     SecurityAudit[]           @relation("SecurityAuditTarget")
+  approvedRegistrations    User[]                    @relation("UserApprovedBy")
+  approvedBy               User?                     @relation("UserApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  rejectedRegistrations    User[]                    @relation("UserRejectedBy")
+  rejectedBy               User?                     @relation("UserRejectedBy", fields: [rejectedById], references: [id], onDelete: SetNull)
+
+  @@index([approvalStatus, requestedAt])
+  @@index([approvedById, approvedAt])
+  @@index([rejectedById, rejectedAt])
 }
 
 model Wallet {
@@ -195,40 +218,40 @@ model WalletTransaction {
 }
 
 model WalletTopUp {
-  id                    String      @id @default(cuid())
-  userId                String
-  amount                Decimal     @db.Decimal(12, 2)
-  paymentMethod         PaymentMethod
-  note                  String?
-  proofUrl              String?
-  status                TopUpStatus @default(PENDING)
-  reviewedById          String?
-  reviewedAt            DateTime?
-  receiptNumber         String?     @unique
-  receiptIssuedAt       DateTime?
-  receiptGeneratedById  String?
-  receiptShareTokenHash String?
+  id                         String        @id @default(cuid())
+  userId                     String
+  amount                     Decimal       @db.Decimal(12, 2)
+  paymentMethod              PaymentMethod
+  note                       String?
+  proofUrl                   String?
+  status                     TopUpStatus   @default(PENDING)
+  reviewedById               String?
+  reviewedAt                 DateTime?
+  receiptNumber              String?       @unique
+  receiptIssuedAt            DateTime?
+  receiptGeneratedById       String?
+  receiptShareTokenHash      String?
   receiptShareTokenExpiresAt DateTime?
   receiptShareTokenRevokedAt DateTime?
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
-  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy            User?       @relation("TopUpReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  receiptGeneratedBy    User?       @relation("TopUpReceiptGeneratedBy", fields: [receiptGeneratedById], references: [id], onDelete: SetNull)
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
+  user                       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy                 User?         @relation("TopUpReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  receiptGeneratedBy         User?         @relation("TopUpReceiptGeneratedBy", fields: [receiptGeneratedById], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
   @@index([status, createdAt])
 }
 
 model SecurityAudit {
-  id            String             @id @default(cuid())
-  type          SecurityAuditType
-  actorId       String?
-  targetUserId  String?
-  metadata      Json?
-  createdAt     DateTime           @default(now())
-  actor         User?              @relation("SecurityAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
-  targetUser    User?              @relation("SecurityAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  id           String            @id @default(cuid())
+  type         SecurityAuditType
+  actorId      String?
+  targetUserId String?
+  metadata     Json?
+  createdAt    DateTime          @default(now())
+  actor        User?             @relation("SecurityAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser   User?             @relation("SecurityAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
 
   @@index([type, createdAt])
   @@index([actorId, createdAt])
@@ -280,7 +303,7 @@ model MatchParticipant {
   updatedAt     DateTime               @updatedAt
   match         Match                  @relation(fields: [matchId], references: [id], onDelete: Cascade)
   user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  presenceLogs MatchPresenceLog[]
+  presenceLogs  MatchPresenceLog[]
 
   @@unique([matchId, userId])
   @@index([matchId])
@@ -288,17 +311,17 @@ model MatchParticipant {
 }
 
 model MatchPresenceLog {
-  id             String         @id @default(cuid())
-  matchId        String
-  userId         String
-  participantId  String?
-  actorId        String?
-  source         PresenceSource
-  createdAt      DateTime       @default(now())
-  match          Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  user           User           @relation("MatchPresenceUser", fields: [userId], references: [id], onDelete: Cascade)
-  participant    MatchParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
-  actor          User?          @relation("MatchPresenceActor", fields: [actorId], references: [id], onDelete: SetNull)
+  id            String            @id @default(cuid())
+  matchId       String
+  userId        String
+  participantId String?
+  actorId       String?
+  source        PresenceSource
+  createdAt     DateTime          @default(now())
+  match         Match             @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user          User              @relation("MatchPresenceUser", fields: [userId], references: [id], onDelete: Cascade)
+  participant   MatchParticipant? @relation(fields: [participantId], references: [id], onDelete: SetNull)
+  actor         User?             @relation("MatchPresenceActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([matchId, createdAt])
   @@index([userId, createdAt])
@@ -397,7 +420,7 @@ model AppSettings {
 }
 
 model Poll {
-  id                   String          @id @default(cuid())
+  id                   String         @id @default(cuid())
   title                String
   description          String?
   matchTitle           String
@@ -406,18 +429,18 @@ model Poll {
   endTime              String
   location             String
   capacity             Int
-  matchAmount          Decimal         @default(10) @db.Decimal(12, 2)
-  allowResponseChanges Boolean         @default(true)
-  manualControl        Boolean         @default(false)
+  matchAmount          Decimal        @default(10) @db.Decimal(12, 2)
+  allowResponseChanges Boolean        @default(true)
+  manualControl        Boolean        @default(false)
   opensAt              DateTime?
   closesAt             DateTime?
-  status               PollStatus      @default(DRAFT)
-  matchId              String?         @unique
+  status               PollStatus     @default(DRAFT)
+  matchId              String?        @unique
   createdById          String
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  createdBy            User            @relation("PollCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  match                Match?          @relation("PollToMatch", fields: [matchId], references: [id], onDelete: SetNull)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  createdBy            User           @relation("PollCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  match                Match?         @relation("PollToMatch", fields: [matchId], references: [id], onDelete: SetNull)
   responses            PollResponse[]
 
   @@index([status, createdAt])
@@ -425,20 +448,20 @@ model Poll {
 }
 
 model PollResponse {
-  id             String             @id @default(cuid())
-  pollId         String
-  userId         String
-  response       PollResponseChoice
-  isWaitlisted   Boolean            @default(false)
-  waitlistOrder  Int?
-  respondedAt    DateTime           @default(now())
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  managedById    String?
-  managedAt      DateTime?
-  poll           Poll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  managedBy      User?              @relation("PollManagedBy", fields: [managedById], references: [id], onDelete: SetNull)
+  id            String             @id @default(cuid())
+  pollId        String
+  userId        String
+  response      PollResponseChoice
+  isWaitlisted  Boolean            @default(false)
+  waitlistOrder Int?
+  respondedAt   DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  managedById   String?
+  managedAt     DateTime?
+  poll          Poll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  managedBy     User?              @relation("PollManagedBy", fields: [managedById], references: [id], onDelete: SetNull)
 
   @@unique([pollId, userId])
   @@index([pollId, response])

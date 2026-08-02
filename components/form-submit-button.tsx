@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
+import { Button, type Variant } from "@/components/ui/button";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export function FormSubmitButton({
@@ -11,6 +11,7 @@ export function FormSubmitButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
   pendingLabel?: string;
+  variant?: Variant;
 }) {
   const { pending } = useFormStatus();
 

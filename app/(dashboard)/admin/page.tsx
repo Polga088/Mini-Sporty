@@ -12,11 +12,13 @@ import {
   Settings,
   ShieldCheck,
   TrendingDown,
+  UserPlus,
   Users,
   Volleyball,
   WalletCards
 } from "lucide-react";
 import {
+  AccountApprovalStatus,
   ContributionStatus,
   ExpenseCategory,
   MatchParticipantStatus,
@@ -148,6 +150,7 @@ export default async function AdminHomePage() {
     matches,
     contributions,
     pendingTopUps,
+    pendingRegistrations,
     openPolls,
     draftMatches,
     pollResponses,
@@ -163,6 +166,7 @@ export default async function AdminHomePage() {
     prisma.match.count(),
     prisma.contribution.count(),
     prisma.walletTopUp.count({ where: { status: TopUpStatus.PENDING } }),
+    prisma.user.count({ where: { role: Role.PLAYER, approvalStatus: AccountApprovalStatus.PENDING } }),
     prisma.poll.count({ where: { status: PollStatus.OPEN } }),
     prisma.match.count({ where: { status: MatchStatus.DRAFT, matchDate: { gte: now } } }),
     prisma.pollResponse.findMany({
@@ -232,6 +236,19 @@ export default async function AdminHomePage() {
     : null;
 
   const priorityItems: PriorityItem[] = [
+    ...(pendingRegistrations > 0
+      ? [
+          {
+            href: "/admin/inscriptions?status=PENDING",
+            label: "Valider les inscriptions",
+            description: `${pendingRegistrations} demande${pendingRegistrations > 1 ? "s" : ""} joueur${pendingRegistrations > 1 ? "s" : ""} à examiner.`,
+            count: pendingRegistrations,
+            badgeLabel: "Accès",
+            tone: "warning" as const,
+            icon: <UserPlus className="h-4 w-4" />
+          }
+        ]
+      : []),
     ...(pendingTopUps > 0
       ? [
           {

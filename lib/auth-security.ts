@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import type { Role } from "@prisma/client";
+import { AccountApprovalStatus, type Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type SessionUserSnapshot = {
   role: Role;
   isActive: boolean;
+  approvalStatus: AccountApprovalStatus;
   mustChangePassword: boolean;
   sessionVersion: number;
   passwordChangedAt: Date | null;
@@ -35,6 +36,7 @@ export async function loadSessionUserSnapshot(userId: string) {
     select: {
       role: true,
       isActive: true,
+      approvalStatus: true,
       mustChangePassword: true,
       sessionVersion: true,
       passwordChangedAt: true
@@ -46,6 +48,7 @@ export function isSessionSnapshotValid(
   token: {
     role?: Role | null;
     isActive?: boolean;
+    approvalStatus?: AccountApprovalStatus | null;
     mustChangePassword?: boolean;
     sessionVersion?: number;
     passwordChangedAt?: string | null;
@@ -54,8 +57,10 @@ export function isSessionSnapshotValid(
 ) {
   return (
     snapshot.isActive &&
+    snapshot.approvalStatus === AccountApprovalStatus.APPROVED &&
     token.role === snapshot.role &&
     token.isActive === snapshot.isActive &&
+    token.approvalStatus === snapshot.approvalStatus &&
     token.mustChangePassword === snapshot.mustChangePassword &&
     token.sessionVersion === snapshot.sessionVersion &&
     token.passwordChangedAt === (snapshot.passwordChangedAt?.toISOString() ?? null)

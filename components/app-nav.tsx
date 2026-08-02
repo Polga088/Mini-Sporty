@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, BadgeEuro, Volleyball, ClipboardList, ReceiptText, PiggyBank, Settings, FileDown, Bell, ChartColumn } from "lucide-react";
+import { LayoutDashboard, Users, BadgeEuro, Volleyball, ClipboardList, ReceiptText, PiggyBank, Settings, FileDown, Bell, ChartColumn, UserPlus } from "lucide-react";
 import { Role } from "@prisma/client";
 import { canAccessSensitiveAdmin, canManageSport } from "@/lib/permissions";
 import { PwaControls } from "@/components/pwa-controls";
@@ -23,6 +23,7 @@ const adminLinks = [
   { href: "/admin/sondages", label: "Sondages", icon: ClipboardList },
   { href: "/admin/matchs", label: "Matchs", icon: Volleyball },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/inscriptions", label: "Inscriptions", icon: UserPlus },
   { href: "/admin/alimentations", label: "Portefeuilles", icon: BadgeEuro },
   { href: "/admin/joueurs", label: "Joueurs", icon: Users },
   { href: "/admin/cotisations", label: "Cotisations", icon: ReceiptText },
@@ -35,7 +36,7 @@ export function AppNav({ role }: { role?: Role | null }) {
   const pathname = usePathname();
   const links = canManageSport(role)
     ? adminLinks.filter((link) => {
-        if (link.href === "/admin/alimentations" || link.href === "/admin/joueurs" || link.href === "/admin/cotisations" || link.href === "/admin/depenses" || link.href === "/admin/exports" || link.href === "/admin/parametres") {
+        if (link.href === "/admin/inscriptions" || link.href === "/admin/alimentations" || link.href === "/admin/joueurs" || link.href === "/admin/cotisations" || link.href === "/admin/depenses" || link.href === "/admin/exports" || link.href === "/admin/parametres") {
           return canAccessSensitiveAdmin(role);
         }
         return true;
