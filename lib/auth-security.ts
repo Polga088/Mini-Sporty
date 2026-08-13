@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { AccountApprovalStatus, type Role } from "@prisma/client";
+import { AccountApprovalStatus, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type SessionUserSnapshot = {
@@ -55,9 +55,11 @@ export function isSessionSnapshotValid(
   },
   snapshot: SessionUserSnapshot
 ) {
+  const approvalAllowsAccess = snapshot.role === Role.PLAYER ? snapshot.approvalStatus === AccountApprovalStatus.APPROVED : true;
+
   return (
     snapshot.isActive &&
-    snapshot.approvalStatus === AccountApprovalStatus.APPROVED &&
+    approvalAllowsAccess &&
     token.role === snapshot.role &&
     token.isActive === snapshot.isActive &&
     token.approvalStatus === snapshot.approvalStatus &&
