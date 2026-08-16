@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
+const isPureAuthApprovalRun = process.argv.some((arg) => arg.endsWith("tests/auth-approval.test.ts"));
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -13,6 +15,6 @@ export default defineConfig({
     fileParallelism: false,
     maxWorkers: 1,
     minWorkers: 1,
-    setupFiles: ["./tests/vitest.setup.ts"]
+    setupFiles: isPureAuthApprovalRun ? [] : ["./tests/vitest.setup.ts"]
   }
 });

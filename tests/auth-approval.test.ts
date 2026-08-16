@@ -3,15 +3,16 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AccountApprovalStatus, Role } from "@prisma/client";
-import type { Session, User } from "next-auth";
-import type { JWT } from "next-auth/jwt";
 import {
   applyAuthUserToToken,
   applySnapshotToToken,
   applyTokenToSession,
+  type AuthSessionPayload,
+  type AuthTokenPayload,
+  type AuthUserPayload,
   canAccountSignIn,
   clearAuthToken
-} from "../auth";
+} from "../lib/auth-session";
 import { isSessionSnapshotValid, type SessionUserSnapshot } from "../lib/auth-security";
 import { NoticeBanner } from "../components/notice-banner";
 
@@ -26,7 +27,7 @@ function approvedSnapshot(role: Role): SessionUserSnapshot {
   };
 }
 
-function tokenFromSnapshot(snapshot: SessionUserSnapshot): JWT {
+function tokenFromSnapshot(snapshot: SessionUserSnapshot): AuthTokenPayload {
   return {
     sub: `${snapshot.role.toLowerCase()}-id`,
     role: snapshot.role,
@@ -72,17 +73,15 @@ describe("approbation Auth.js", () => {
   it("propage approvalStatus du user vers le JWT puis la session", () => {
     const user = {
       id: "player-id",
-      name: "Player Test",
-      email: "player@test.local",
       role: Role.PLAYER,
       isActive: true,
       approvalStatus: AccountApprovalStatus.APPROVED,
       mustChangePassword: false,
       sessionVersion: 2,
       passwordChangedAt: "2026-01-01T10:00:00.000Z"
-    } satisfies User;
+    } satisfies AuthUserPayload;
 
-    const token = applyAuthUserToToken({}, user);
+    const token = applyAuthUserToToken({} as AuthTokenPayload, user);
     expect(token.approvalStatus).toBe(AccountApprovalStatus.APPROVED);
 
     const session = applyTokenToSession(
@@ -94,20 +93,22 @@ describe("approbation Auth.js", () => {
           image: null
         },
         expires: "2026-01-01T11:00:00.000Z"
-      } satisfies Session,
+      } as AuthSessionPayload,
       token
     );
+    const sessionUser = session.user;
 
-    expect(session.user.id).toBe("player-id");
-    expect(session.user.role).toBe(Role.PLAYER);
-    expect(session.user.approvalStatus).toBe(AccountApprovalStatus.APPROVED);
-    expect(session.user.isAdmin).toBe(false);
-    expect(session.user.isCaptain).toBe(false);
+    expect(sessionUser).toBeDefined();
+    expect(sessionUser?.id).toBe("player-id");
+    expect(sessionUser?.role).toBe(Role.PLAYER);
+    expect(sessionUser?.approvalStatus).toBe(AccountApprovalStatus.APPROVED);
+    expect(sessionUser?.isAdmin).toBe(false);
+    expect(sessionUser?.isCaptain).toBe(false);
   });
 
   it("rafraîchit le JWT depuis la base et efface approvalStatus quand la session est invalidée", () => {
     const snapshot = approvedSnapshot(Role.ADMIN);
-    const token = applySnapshotToToken({ sub: "admin-id" }, snapshot);
+    const token = applySnapshotToToken({ sub: "admin-id" } as AuthTokenPayload, snapshot);
 
     expect(token.approvalStatus).toBe(AccountApprovalStatus.APPROVED);
     expect(token.passwordChangedAt).toBe("2026-01-01T10:00:00.000Z");
