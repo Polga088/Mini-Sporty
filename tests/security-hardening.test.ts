@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { Role, TopUpStatus } from "@prisma/client";
+import { AccountApprovalStatus, Role, TopUpStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { decimal } from "../lib/money";
 import { safeAuthRedirect, isSessionSnapshotValid } from "../lib/auth-security";
@@ -132,6 +132,7 @@ async function createPlayerWithPassword(password: string, mustChangePassword = f
       passwordHash: await bcrypt.hash(password, 10),
       passwordChangedAt: new Date(),
       mustChangePassword,
+      approvalStatus: AccountApprovalStatus.APPROVED,
       role: Role.PLAYER,
       sessionVersion: 0,
       wallet: {
@@ -159,6 +160,7 @@ describe("sécurité renforcée", () => {
       isActive: true,
       mustChangePassword: true,
       sessionVersion: 0,
+      approvalStatus: AccountApprovalStatus.APPROVED,
       passwordChangedAt: player.passwordChangedAt?.toISOString() ?? null
     };
 
@@ -203,6 +205,7 @@ describe("sécurité renforcée", () => {
         isActive: updated?.isActive ?? false,
         mustChangePassword: updated?.mustChangePassword ?? false,
         sessionVersion: updated?.sessionVersion ?? 0,
+        approvalStatus: AccountApprovalStatus.APPROVED,
         passwordChangedAt: updated?.passwordChangedAt ?? null
       })
     ).toBe(false);
@@ -215,6 +218,7 @@ describe("sécurité renforcée", () => {
       isActive: true,
       mustChangePassword: false,
       sessionVersion: 0,
+      approvalStatus: AccountApprovalStatus.APPROVED,
       passwordChangedAt: player.passwordChangedAt?.toISOString() ?? null
     };
 
@@ -240,6 +244,7 @@ describe("sécurité renforcée", () => {
         isActive: updated?.isActive ?? true,
         mustChangePassword: updated?.mustChangePassword ?? false,
         sessionVersion: updated?.sessionVersion ?? 0,
+        approvalStatus: AccountApprovalStatus.APPROVED,
         passwordChangedAt: updated?.passwordChangedAt ?? null
       })
     ).toBe(false);

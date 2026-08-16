@@ -83,6 +83,23 @@ export const createPlayerSchema = z.object({
   initialBalance: z.coerce.number().min(0).multipleOf(0.01).optional()
 });
 
+export const publicPlayerRegistrationSchema = z.object({
+  name: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères.").max(80),
+  email: z.string().trim().toLowerCase().email("Adresse e-mail invalide.").max(120),
+  phone: z.string().trim().min(6, "Téléphone trop court.").max(30),
+  password: z.string().min(10, "Mot de passe trop court.").regex(/[A-Z]/, "Ajoute une majuscule.").regex(/[a-z]/, "Ajoute une minuscule.").regex(/[0-9]/, "Ajoute un chiffre."),
+  confirmPassword: z.string().min(1),
+  acceptRules: z.literal("on", { message: "Tu dois accepter les règles internes." })
+}).refine((value) => value.password === value.confirmPassword, {
+  path: ["confirmPassword"],
+  message: "Les mots de passe ne correspondent pas."
+});
+
+export const registrationAdminActionSchema = z.object({
+  userId: z.string().min(1),
+  reason: z.string().trim().max(240).optional().or(z.literal(""))
+});
+
 export const updatePlayerSchema = z.object({
   playerId: z.string().min(1),
   name: z.string().min(2),

@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import PublicAuthPortal from "@/components/public-auth-portal";
 import { redirect } from "next/navigation";
 
 export default async function HomePage() {
@@ -8,5 +9,5 @@ export default async function HomePage() {
   if (session?.user?.id) {
     redirect(session.user.role === "ADMIN" ? "/admin" : "/espace");
   }
-  redirect("/connexion");
+  return <PublicAuthPortal defaultMode="login" />;
 }

@@ -1,6 +1,14 @@
 import { Badge } from "@/components/ui/badge";
 
-const messages: Record<string, { title: string; description: string; variant: "success" | "danger" | "warning" | "info" }> = {
+const messages: Record<
+  string,
+  {
+    title: string;
+    description: string;
+    variant: "success" | "danger" | "warning" | "info";
+    badge?: string;
+  }
+> = {
   created: {
     title: "Joueur créé",
     description: "Le joueur rejoint l’équipe avec son wallet.",
@@ -176,6 +184,52 @@ const messages: Record<string, { title: string; description: string; variant: "s
     description: "Votre présence a été enregistrée via QR.",
     variant: "success"
   },
+  registration_submitted: {
+    title: "Demande envoyée",
+    description: "Votre inscription attend maintenant la validation de l’administrateur.",
+    variant: "success"
+  },
+  registration_pending: {
+    title: "Inscription enregistrée",
+    description: "Votre demande a bien été envoyée. Un administrateur doit valider votre compte avant votre première connexion.",
+    variant: "warning",
+    badge: "En attente de validation"
+  },
+  registration_denied: {
+    title: "Inscription non validée",
+    description: "Contactez l’administrateur si vous pensez qu’il s’agit d’une erreur.",
+    variant: "danger"
+  },
+  inactive_account: {
+    title: "Compte désactivé",
+    description: "Demandez à l’administrateur de vérifier votre accès.",
+    variant: "warning"
+  },
+  login_invalid: {
+    title: "Connexion impossible",
+    description: "Vérifiez vos identifiants puis réessayez.",
+    variant: "danger"
+  },
+  registration_duplicate: {
+    title: "Demande non envoyée",
+    description: "Si cette adresse peut rejoindre l’équipe, elle sera examinée par l’administrateur.",
+    variant: "info"
+  },
+  registration_rate_limited: {
+    title: "Un instant",
+    description: "Patientez quelques secondes avant de renvoyer une demande.",
+    variant: "warning"
+  },
+  registration_approved: {
+    title: "Inscription approuvée",
+    description: "Le compte joueur est activé et son wallet est prêt.",
+    variant: "success"
+  },
+  registration_rejected: {
+    title: "Inscription refusée",
+    description: "La demande a été refusée sans créer de wallet.",
+    variant: "warning"
+  },
   invalid_token: {
     title: "QR invalide",
     description: "Le lien de présence n’est pas valide.",
@@ -345,14 +399,17 @@ export function NoticeBanner({
           ? "border-sky-200 bg-sky-50 text-sky-950"
           : "border-red-200 bg-red-50 text-red-950";
 
+  const isBlockingError = Boolean(error && notice.variant === "danger");
+  const badgeLabel = notice.badge ?? (success ? "OK" : isBlockingError ? "Erreur" : "Info");
+
   return (
-    <div className={`rounded-2xl border p-4 shadow-soft ${variantClass}`} role={error ? "alert" : "status"} aria-live={error ? "assertive" : "polite"}>
+    <div className={`rounded-2xl border p-4 shadow-soft ${variantClass}`} role={isBlockingError ? "alert" : "status"} aria-live={isBlockingError ? "assertive" : "polite"}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-semibold">{notice.title}</p>
           <p className="mt-1 text-sm opacity-90">{notice.description}</p>
         </div>
-        <Badge variant={notice.variant}>{error ? "Erreur" : "OK"}</Badge>
+        <Badge variant={notice.variant}>{badgeLabel}</Badge>
       </div>
     </div>
   );

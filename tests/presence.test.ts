@@ -116,6 +116,24 @@ function formData(entries: Record<string, string>) {
   return form;
 }
 
+function futureMatchDate() {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000);
+}
+
+function expiredMatchDate() {
+  return new Date(Date.now() - 24 * 60 * 60 * 1000);
+}
+
+async function expectQrExpiresInFuture(matchId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { qrTokenExpiresAt: true }
+  });
+
+  expect(match?.qrTokenExpiresAt).toBeInstanceOf(Date);
+  expect(match?.qrTokenExpiresAt?.getTime()).toBeGreaterThan(Date.now());
+}
+
 async function expectRedirect(promise: Promise<unknown>, expectedUrl: string | RegExp) {
   let error: (Error & { url?: string }) | undefined;
 
@@ -148,7 +166,7 @@ async function createTempPlayer(balance: number) {
   });
 }
 
-async function createTempMatch(status: MatchStatus = MatchStatus.OPEN, matchDate = new Date("2026-08-01T20:00:00.000Z")) {
+async function createTempMatch(status: MatchStatus = MatchStatus.OPEN, matchDate = futureMatchDate()) {
   const match = await prisma.match.create({
     data: {
       title: `Présence ${Date.now()}`,
@@ -183,6 +201,7 @@ describe("présence QR", () => {
     });
 
     const qr = await getOrCreatePresenceQr(match.id);
+    await expectQrExpiresInFuture(match.id);
     mocks.auth.mockResolvedValue(playerSession(player.id));
 
     await expectRedirect(
@@ -211,6 +230,7 @@ describe("présence QR", () => {
     const outsider = await createTempPlayer(35);
     const match = await createTempMatch();
     const qr = await getOrCreatePresenceQr(match.id);
+    await expectQrExpiresInFuture(match.id);
     mocks.auth.mockResolvedValue(playerSession(outsider.id));
 
     await expectRedirect(
@@ -226,7 +246,7 @@ describe("présence QR", () => {
 
   it("refuse un QR expiré ou un match annulé", async () => {
     const player = await createTempPlayer(35);
-    const expiredMatch = await createTempMatch(MatchStatus.OPEN, new Date("2026-07-01T20:00:00.000Z"));
+    const expiredMatch = await createTempMatch(MatchStatus.OPEN, expiredMatchDate());
     const cancelledMatch = await createTempMatch(MatchStatus.CANCELLED);
 
     await prisma.matchParticipant.createMany({
@@ -250,6 +270,11 @@ describe("présence QR", () => {
 
     const expiredQr = await getOrCreatePresenceQr(expiredMatch.id);
     const cancelledQr = await getOrCreatePresenceQr(cancelledMatch.id);
+    const expiredQrMatch = await prisma.match.findUnique({
+      where: { id: expiredMatch.id },
+      select: { qrTokenExpiresAt: true }
+    });
+    expect(expiredQrMatch?.qrTokenExpiresAt?.getTime()).toBeLessThan(Date.now());
     mocks.auth.mockResolvedValue(playerSession(player.id));
 
     await expectRedirect(

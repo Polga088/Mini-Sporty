@@ -9,6 +9,8 @@ export function lowBalanceNotification(balanceAfter: Prisma.Decimal, threshold =
 }
 
 export const notificationTypeLabels: Record<NotificationType, string> = {
+  PLAYER_REGISTRATION_SUBMITTED: "Inscription joueur",
+  PLAYER_REGISTRATION_APPROVED: "Compte activé",
   POLL_OPENED: "Sondage ouvert",
   POLL_CLOSING_SOON: "Clôture imminente",
   POLL_NEAR_FULL: "Sondage presque complet",
@@ -25,6 +27,22 @@ export const notificationTypeLabels: Record<NotificationType, string> = {
   REFUND_CREATED: "Remboursement créé",
   GENERAL: "Information"
 };
+
+export function playerRegistrationSubmittedNotification(playerName: string) {
+  return {
+    type: NotificationType.PLAYER_REGISTRATION_SUBMITTED,
+    title: "Nouvelle inscription",
+    message: `${playerName} souhaite rejoindre Mini Sporty.`
+  };
+}
+
+export function playerRegistrationApprovedNotification() {
+  return {
+    type: NotificationType.PLAYER_REGISTRATION_APPROVED,
+    title: "Accès activé",
+    message: "Ton compte est prêt. Tu peux maintenant te connecter."
+  };
+}
 
 export function pollOpenedNotification(title: string) {
   return {

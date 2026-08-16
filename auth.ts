@@ -3,7 +3,13 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { isAdmin, isCaptain } from "@/lib/permissions";
+import {
+  applyAuthUserToToken,
+  applySnapshotToToken,
+  applyTokenToSession,
+  canAccountSignIn,
+  clearAuthToken
+} from "@/lib/auth-session";
 import {
   isSessionSnapshotValid,
   loadSessionUserSnapshot,
@@ -41,7 +47,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email }
         });
 
-        if (!user || !user.isActive) return null;
+        if (!user || !canAccountSignIn(user)) return null;
 
         const passwordValid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!passwordValid) return null;
@@ -52,6 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          approvalStatus: user.approvalStatus,
           mustChangePassword: user.mustChangePassword,
           sessionVersion: user.sessionVersion,
           passwordChangedAt: user.passwordChangedAt?.toISOString() ?? null
@@ -62,49 +69,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.sub = user.id;
-        token.role = user.role;
-        token.isActive = user.isActive;
-        token.mustChangePassword = user.mustChangePassword;
-        token.sessionVersion = user.sessionVersion;
-        token.passwordChangedAt = user.passwordChangedAt ?? null;
+        applyAuthUserToToken(token, user);
       }
 
       if (token.sub) {
         const dbUser = await loadSessionUserSnapshot(token.sub);
 
         if (!dbUser || !isSessionSnapshotValid(token, dbUser)) {
-          token.sub = undefined;
-          token.role = undefined;
-          token.isActive = undefined;
-          token.mustChangePassword = undefined;
-          token.sessionVersion = undefined;
-          token.passwordChangedAt = undefined;
-          return token;
+          return clearAuthToken(token);
         }
 
-        token.role = dbUser.role;
-        token.isActive = dbUser.isActive;
-        token.mustChangePassword = dbUser.mustChangePassword;
-        token.sessionVersion = dbUser.sessionVersion;
-        token.passwordChangedAt = dbUser.passwordChangedAt?.toISOString() ?? null;
+        applySnapshotToToken(token, dbUser);
       }
 
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? "";
-        session.user.role = token.role;
-        session.user.isAdmin = isAdmin(token.role);
-        session.user.isCaptain = isCaptain(token.role);
-        session.user.isActive = token.isActive ?? false;
-        session.user.mustChangePassword = token.mustChangePassword ?? false;
-        session.user.sessionVersion = token.sessionVersion ?? 0;
-        session.user.passwordChangedAt = token.passwordChangedAt ?? null;
-      }
-
-      return session;
+      return applyTokenToSession(session, token);
     },
     async redirect({ url, baseUrl }) {
       return safeAuthRedirect(url, baseUrl);

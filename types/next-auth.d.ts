@@ -1,6 +1,6 @@
 import "next-auth";
 import "next-auth/jwt";
-import type { Role } from "@prisma/client";
+import type { AccountApprovalStatus, Role } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -10,6 +10,7 @@ declare module "next-auth" {
       isAdmin?: boolean;
       isCaptain?: boolean;
       isActive?: boolean;
+      approvalStatus?: AccountApprovalStatus | null;
       mustChangePassword?: boolean;
       sessionVersion?: number;
       passwordChangedAt?: string | null;
@@ -22,6 +23,7 @@ declare module "next-auth" {
   interface User {
     role?: Role;
     isActive?: boolean;
+    approvalStatus?: AccountApprovalStatus;
     mustChangePassword?: boolean;
     sessionVersion?: number;
     passwordChangedAt?: string | null;
@@ -32,6 +34,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: Role;
     isActive?: boolean;
+    approvalStatus?: AccountApprovalStatus | null;
     mustChangePassword?: boolean;
     sessionVersion?: number;
     passwordChangedAt?: string | null;
